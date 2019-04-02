@@ -7,6 +7,12 @@ set -e
 [ -z "$AWS_CONFIG_FOLDER" ] && AWS_CONFIG_FOLDER=$AWS_APP_NAME
 aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_APP_NAME/ /opt/va/ --recursive
 
+# Copies kong.yml configuration from S3
+# Includes plugin configurations that cannot be commited to github
+# For local development, consider commenting out this line and instead
+# uncommenting the Dockerfile line - COPY kong.yml /etc/kong/kong.yml
+aws s3 cp s3://$AWS_BUCKET_NAME/kong/ /etc/kong/ --recursive
+
 #
 # Start up app and log activity
 # If a start up hook exists, execute it
