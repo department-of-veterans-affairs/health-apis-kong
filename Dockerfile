@@ -20,6 +20,7 @@ RUN cd /tmp/aws2 && chmod 777 /tmp/aws2/awscli-bundle.zip && unzip /tmp/aws2/aws
 COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod 777 /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
