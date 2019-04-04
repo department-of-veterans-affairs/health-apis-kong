@@ -107,7 +107,7 @@ end
 function HealthApisTokenValidator:check_icn(tokenIcn)
 
   local requestIcn = self:get_request_icn()
-
+    
   if (requestIcn == nil) then
     if (self:is_request_search()) then
       return self:send_response(403, ICN_MISSING)
@@ -155,7 +155,7 @@ function HealthApisTokenValidator:get_token_from_auth_string(authString)
 end
 
 function HealthApisTokenValidator:is_request_read()
-  local requestedResourceRead = string.match(ngx.var.uri, "/%a*/[%w%-]+$")
+  local requestedResourceRead = string.match(ngx.var.uri, "/api/%a*/[%w%-]+$")
   return (requestedResourceRead ~= nil)
 end
 
@@ -213,7 +213,7 @@ function HealthApisTokenValidator:get_requested_resource_type()
   else
     requestedResource = string.match(ngx.var.uri, "%a*$")
   end
-
+  
   return requestedResource
 
 end
