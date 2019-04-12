@@ -1,4 +1,4 @@
-FROM kong:1.1.0
+FROM kong:1.1.1
 
 # https://github.com/department-of-veterans-affairs/health-apis-devops/blob/master/operations/application-base/Dockerfile
 # necessary tools to run application
