@@ -11,7 +11,7 @@ aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_APP_NAME/ /opt/va/ --recursive
 # Includes plugin configurations that cannot be commited to github
 # For local development, consider commenting out this line and instead
 # uncommenting the Dockerfile line - COPY kong.yml /etc/kong/kong.yml
-aws s3 cp s3://$AWS_BUCKET_NAME/kong/ /etc/kong/ --recursive
+aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_CONFIG_FOLDER/ /etc/kong/ --recursive
 
 #
 # Start up app and log activity
