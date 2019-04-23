@@ -32,14 +32,11 @@ services:
         static_expiration: 3599
         static_icn: {{static-icn}}
         static_scopes: {{static-scopes}}
-    - name: request-termination
+    - name: health-apis-patient-registration
       config:
-        status_code: 307
-    - name: response-transformer
-      config:
-        add:
-          headers:
-            - 'Location: {{token-endpoint}}'
+        ids_url: {{ids-endpoint}}/api/v1/ids
+        token_url: 'Location: {{token-endpoint}}'
+        token_timeout: 10000
   - name: argonaut-base-api-route
     paths:
     - /api

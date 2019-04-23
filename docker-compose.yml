@@ -10,7 +10,7 @@ services:
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
-      KONG_PLUGINS: bundled,health-apis-token-validator,health-apis-static-token-handler
+      KONG_PLUGINS: request-termination,response-transformer,health-apis-token-validator,health-apis-static-token-handler,health-apis-patient-registration
       AWS_CONFIG_FOLDER: kong
       AWS_APP_NAME: kong
     ports:
