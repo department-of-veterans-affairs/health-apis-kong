@@ -55,6 +55,16 @@ function HealthApisPatientRegistration:access(conf)
     ngx.log(ngx.ERR, "failed to get post args: ", errors)
     return
   end
+  
+  local post_args, errors = ngx.req.get_post_args()
+  local requestRefreshToken = post_args["refresh_token"]  
+  
+  if (requestRefreshToken ~= nil and requestRefreshToken == self.conf.static_refresh_token) then
+    ngx.log(ngx.INFO, "Static refresh token requested")
+    self:register_patient(self.conf.static_icn)
+    --only register the static patient, no token call required
+    return
+  end
     
   local client = http.new()
   client:set_timeout(self.conf.token_timeout)
@@ -165,6 +175,6 @@ function HealthApisPatientRegistration:send_response(status_code, message)
 end
 
 
-HealthApisPatientRegistration.PRIORITY = 1009
+HealthApisPatientRegistration.PRIORITY = 1011
 
 return HealthApisPatientRegistration
