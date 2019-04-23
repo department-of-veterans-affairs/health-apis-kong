@@ -124,7 +124,6 @@ function HealthApisTokenValidator:check_scope(tokenScope)
   local requestedResource = self:get_requested_resource_type()
   local requestScope = "patient/" .. requestedResource .. ".read"
 
-  ngx.log(ngx.ERR, "Requested scope: ", requestScope)
   if (self:check_for_array_entry(tokenScope, requestScope) ~= true) then
     ngx.log(ngx.INFO, "Requested resource scope not granted to token")
     return self:send_response(403, SCOPE_MISMATCH)
