@@ -26,7 +26,7 @@ local OPERATIONAL_OUTCOME_TEMPLATE =
 
 local BAD_AUTHORIZE_RESPONSE = "Authorization failed."
 local BAD_IDS_RESPONSE = "IDS failed."
-
+local MISSING_ICN = "Token response missing ICN."
 
 function HealthApisPatientRegistration:new()
   HealthApisPatientRegistration.super.new(self, "health-apis-patient-registration")
@@ -97,6 +97,10 @@ end
 
 function HealthApisPatientRegistration:register_patient(patient_icn)
 
+  if (patient_icn == nil) then
+    return self:send_fhir_response(500, MISSING_ICN)
+  end
+
   local ids_client = http.new()
   ids_client:set_timeout(self.conf.token_timeout)
   
@@ -161,6 +165,6 @@ function HealthApisPatientRegistration:send_response(status_code, message)
 end
 
 
-HealthApisPatientRegistration.PRIORITY = 1010
+HealthApisPatientRegistration.PRIORITY = 1009
 
 return HealthApisPatientRegistration
