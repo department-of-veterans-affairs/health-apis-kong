@@ -10,10 +10,6 @@ A Kong plugin to validate a supplied OAuth token.  It can be installed on a Kong
 
 ### Building
 
-> Luarocks must be installed to build.
-
-Run `luarocks pack health-apis-token-validator-0.1-2.rockspec` to package the plugin into a Lua "rock" which can then be copied and installed on a Kong instance.
-
 ### Configuration
 
 Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
@@ -38,11 +34,6 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
 
 A Kong plugin to return a static access token used for customer testing
 
-> Luarocks must be installed to build.
-
-Run `luarocks pack health-apis-static-token-handler-0.1-1.rockspec` to package the plugin into a Lua "rock" which can then be copied and installed on a Kong instance.
-
-
 ### Configuration
 
 Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
@@ -61,15 +52,34 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
 }
 ```
 
+## health-apis-patient-registration Kong Plugin
+
+A Kong plugin to handle patient registration with the Identity Service as part of the access token retrieval.
+
+
+### Configuration
+
+Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
+
+```
+{
+    "name": "health-apis-patient-registration",
+    "config": {
+        "ids_url": "{{ids-endpoint}}/api/v1/ids"
+        "token_url": "{{token-endpoint}}'"
+        "token_timeout": "10000"
+    },
+    "enabled": true
+}
+```
 
 ## Local development
 
-The base Kong docker-compose file has been updated to mount the two plugins as volumes within the Kong docker container.  Along with the `KONG_PLUGINS` config defining the additional plugins as enabled.
+A docker-compose script exists for local development of plugins.  Ensure you first build `docker build -t health-apis-kong:latest .` to test your changes.
+
+`COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/` in the Dockerfile copies the custom plugins into the image.
+
+> Note:  Uncomment `COPY kong.yml /etc/kong/kong.yml` in the Dockerfile to utilize the local kong.yml, otherwise it will pull from S3 and not include your configurations.
 
 `docker-compose up`
 
-Docker must be allowed share access to the location of your local repo.
-
-> Note:   There have been issues observed mounting volumes when logged in to your machine with an Active Directory account
-
-With volume mounting, you can use your local machine's text editor of choice for testing changes of the Lua files.  A simple `kong reload` will update your changes within the kong instance.
