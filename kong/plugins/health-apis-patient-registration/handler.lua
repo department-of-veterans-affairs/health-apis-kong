@@ -47,10 +47,6 @@ function HealthApisPatientRegistration:access(conf)
 
   local body_data, errors = ngx.req.get_body_data()
 
-  if errors == "truncated" then
-    -- one can choose to ignore or reject the current request here
-  end
-
   if not body_data then
     ngx.log(ngx.ERR, "failed to get post args: ", errors)
     return
