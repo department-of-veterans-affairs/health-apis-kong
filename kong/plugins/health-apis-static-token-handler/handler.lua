@@ -18,10 +18,6 @@ function HealthApisStaticTokenHandler:access(conf)
 
   local body, errors = ngx.req.get_post_args()
 
-  if errors == "truncated" then
-    -- one can choose to ignore or reject the current request here
-  end
-
   if not body then
     ngx.log(ngx.ERR, "failed to get post args: ", errors)
     return
