@@ -68,8 +68,8 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
         "ids_url": "{{ids-endpoint}}/api/v1/ids"
         "token_url": "{{token-endpoint}}'"
         "token_timeout": "10000"
-        "static_refresh_token": "{static-refresh-token}",
-        "static_icn": "{static-icn}"
+        "static_refresh_token": "{{static-refresh-token}}",
+        "static_icn": "{{static-icn}}"
     },
     "enabled": true
 }
