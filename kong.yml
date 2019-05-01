@@ -51,6 +51,7 @@ services:
         api_key: {{api-key}}
         static_token: {{static-access-token}}
         static_icn: {{static-icn}}
+        scope_validation_enabled: true
   - name: argonaut-metadata-route
     paths: 
     - /api/metadata

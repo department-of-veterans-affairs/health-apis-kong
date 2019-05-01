@@ -22,7 +22,8 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
         "verification_timeout": {verification-timeout},
         "api_key": "{api-key}",
         "static_token": "{static-token}",
-        "static_icn": "{static-icn}"
+        "static_icn": "{static-icn}",
+        "scope_validation_enabled": "{scope-validation-enabled}"
     },
     "enabled": true
 }

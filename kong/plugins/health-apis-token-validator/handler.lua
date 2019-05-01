@@ -58,7 +58,9 @@ function HealthApisTokenValidator:access(conf)
     tokenIcn = responseJson.data.attributes["va_identifiers"].icn
     responseScopes = responseJson.data.attributes.scp
 
-    self:check_scope(responseScopes)
+    if (self.conf.scope_validation_enabled) then
+      self:check_scope(responseScopes)
+    end
   end
 
   self:check_icn(tokenIcn)

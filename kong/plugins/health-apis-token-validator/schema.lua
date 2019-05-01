@@ -6,6 +6,7 @@ return {
     verification_host = {type = "string"},
     static_token = {type = "string", default = ""},
     static_icn = {type = "string", default = ""},
+    scope_validation_enabled = {type = "boolean", default = true},
     api_key = {type = "string"}
   }
 }
