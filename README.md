@@ -53,9 +53,9 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
 }
 ```
 
-## health-apis-oauth-token-flow Kong Plugin
+## health-apis-patient-registration Kong Plugin
 
-A Kong plugin to handle the oauth token flow with an optional configuration for patient registration with the Identity Service.
+A Kong plugin to handle patient registration with the Identity Service as part of the access token retrieval.
 
 
 ### Configuration
@@ -66,10 +66,9 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
 {
     "name": "health-apis-patient-registration",
     "config": {
-        "ids_url": "{ids-endpoint}/api/v1/ids",
-        "patient_registration_enabled": "true",
-        "token_url": "{token-endpoint}'",
-        "token_timeout": "10000",
+        "ids_url": "{ids-endpoint}/api/v1/ids"
+        "token_url": "{token-endpoint}'"
+        "token_timeout": "10000"
         "static_refresh_token": "{static-refresh-token}",
         "static_icn": "{static-icn}"
     },

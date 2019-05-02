@@ -1,4 +1,4 @@
-local HealthApisOauthTokenFlow = require("kong.plugins.base_plugin"):extend()
+local HealthApisPatientRegistration = require("kong.plugins.base_plugin"):extend()
 
 local http = require "resty.http"
 local cjson = require "cjson.safe"
@@ -28,12 +28,12 @@ local BAD_AUTHORIZE_RESPONSE = "Authorization failed."
 local BAD_IDS_RESPONSE = "IDS failed."
 local MISSING_ICN = "Token response missing ICN."
 
-function HealthApisOauthTokenFlow:new()
-  HealthApisOauthTokenFlow.super.new(self, "health-apis-oauth-token-flow")
+function HealthApisPatientRegistration:new()
+  HealthApisPatientRegistration.super.new(self, "health-apis-patient-registration")
 end
 
-function HealthApisOauthTokenFlow:access(conf)
-  HealthApisOauthTokenFlow.super.access(self)
+function HealthApisPatientRegistration:access(conf)
+  HealthApisPatientRegistration.super.access(self)
 
   self.conf = conf
 
@@ -101,10 +101,7 @@ function HealthApisOauthTokenFlow:access(conf)
 
 end
 
-function HealthApisOauthTokenFlow:register_patient(patient_icn)
-  if (not self.conf.patient_registration_enabled) then
-    return
-  end
+function HealthApisPatientRegistration:register_patient(patient_icn)
 
   if (patient_icn == nil) then
     return self:send_fhir_response(500, MISSING_ICN)
@@ -154,7 +151,7 @@ end
 
 
 -- Format and send the response to the client
-function HealthApisOauthTokenFlow:send_fhir_response(status_code, message)
+function HealthApisPatientRegistration:send_fhir_response(status_code, message)
 
   ngx.status = status_code
   ngx.header["Content-Type"] = "application/json"
@@ -164,7 +161,7 @@ function HealthApisOauthTokenFlow:send_fhir_response(status_code, message)
   ngx.exit(status_code)
 end
 
-function HealthApisOauthTokenFlow:send_response(status_code, message)
+function HealthApisPatientRegistration:send_response(status_code, message)
 
   ngx.status = status_code
   ngx.header["Content-Type"] = "application/json"
@@ -174,6 +171,6 @@ function HealthApisOauthTokenFlow:send_response(status_code, message)
 end
 
 
-HealthApisOauthTokenFlow.PRIORITY = 1011
+HealthApisPatientRegistration.PRIORITY = 1011
 
-return HealthApisOauthTokenFlow
+return HealthApisPatientRegistration
