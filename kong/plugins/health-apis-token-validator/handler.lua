@@ -156,7 +156,7 @@ function HealthApisTokenValidator:get_token_from_auth_string(authString)
 end
 
 function HealthApisTokenValidator:is_request_read()
-  local requestedResourceRead = string.match(ngx.var.uri, "/api/%a*/[%w%-]+$")
+  local requestedResourceRead = string.match(ngx.var.uri, "/%a*/[%w%-]+$")
   return (requestedResourceRead ~= nil)
 end
 
