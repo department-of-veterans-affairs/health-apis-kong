@@ -65,6 +65,8 @@ function HealthApisTokenValidator:access(conf)
 
   self:check_icn(tokenIcn)
 
+  kong.service.request.set_header("X-VA-ICN", tokenIcn)
+
 end
 
 function HealthApisTokenValidator:check_token()
@@ -109,7 +111,7 @@ end
 function HealthApisTokenValidator:check_icn(tokenIcn)
 
   local requestIcn = self:get_request_icn()
-    
+
   if (requestIcn == nil) then
     if (self:is_request_search()) then
       return self:send_response(403, ICN_MISSING)
@@ -214,7 +216,7 @@ function HealthApisTokenValidator:get_requested_resource_type()
   else
     requestedResource = string.match(ngx.var.uri, "%a*$")
   end
-  
+
   return requestedResource
 
 end
