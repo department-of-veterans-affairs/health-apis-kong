@@ -23,7 +23,8 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
         "api_key": "{api-key}",
         "static_token": "{static-token}",
         "static_icn": "{static-icn}",
-        "scope_validation_enabled": "{scope-validation-enabled}"
+        "custom_scope_validation_enabled": "{custom-scope-validation-enabled}"
+        "custom_scope": "{custom-scope}"
     },
     "enabled": true
 }
@@ -80,11 +81,13 @@ Once the plugin is installed on the Kong instance, it can be configured via the 
 
 ## Local development
 
-A docker-compose script exists for local development of plugins.  Ensure you first build `docker build -t health-apis-kong:latest .` to test your changes.
+A docker-compose script exists for local development of plugins.  
 
 `COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/` in the Dockerfile copies the custom plugins into the image.
 
-> Note:  Uncomment `COPY kong.yml /etc/kong/kong.yml` in the Dockerfile to utilize the local kong.yml, otherwise it will pull from S3 and not include your configurations.
+> Note:  Uncomment `COPY kong.yml /etc/kong/kong.yml` in the Dockerfile to utilize the local kong.yml, otherwise it will pull from S3 and not include your configurations.  Also in the `docker-entrypoint.sh`, comment out the `aws` file copying and the `cd /opt/va` since that directory will not exist. 
+
+Ensure you first build `docker build -t health-apis-kong:latest .` to test your changes.
 
 `docker-compose up`
 

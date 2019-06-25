@@ -6,7 +6,8 @@ return {
     verification_host = {type = "string"},
     static_token = {type = "string", default = ""},
     static_icn = {type = "string", default = ""},
-    scope_validation_enabled = {type = "boolean", default = true},
+    custom_scope_validation_enabled = {type = "boolean", default = false},
+    custom_scope = {type = "string", default = ""},
     api_key = {type = "string"}
   }
 }

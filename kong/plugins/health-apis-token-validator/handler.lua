@@ -57,10 +57,8 @@ function HealthApisTokenValidator:access(conf)
 
     tokenIcn = responseJson.data.attributes["va_identifiers"].icn
     responseScopes = responseJson.data.attributes.scp
-
-    if (self.conf.scope_validation_enabled) then
-      self:check_scope(responseScopes)
-    end
+    self:check_scope(responseScopes)
+    
   end
 
   self:check_icn(tokenIcn)
@@ -125,7 +123,14 @@ end
 
 function HealthApisTokenValidator:check_scope(tokenScope)
 
-  local requestedResource = self:get_requested_resource_type()
+  local requestedResource = nil
+  
+  if (self.conf.custom_scope_validation_enabled) then
+    requestedResource = self.conf.custom_scope
+  else 
+    requestedResource = self:get_requested_resource_type()
+  end
+
   local requestScope = "patient/" .. requestedResource .. ".read"
 
   if (self:check_for_array_entry(tokenScope, requestScope) ~= true) then
@@ -158,6 +163,12 @@ function HealthApisTokenValidator:get_token_from_auth_string(authString)
 end
 
 function HealthApisTokenValidator:is_request_read()
+  if (string.match(ngx.var.uri, "/[%w]+$") == "/search") then
+    return false
+  end
+  
+  -- Note: This works for the Urgent Care resource as a side effect of
+  -- the "%a*" (any *letter* repeating) rejects /r4/{resource} as a read
   local requestedResourceRead = string.match(ngx.var.uri, "/%a*/[%w%-]+$")
   return (requestedResourceRead ~= nil)
 end
