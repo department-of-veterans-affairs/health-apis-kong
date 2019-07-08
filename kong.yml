@@ -7,19 +7,6 @@ services:
   - name: argonaut-informational-routes
     paths:
     - /
-  - name: argonaut-authorize-route
-    paths:
-    - /authorize
-    strip_path: false
-    plugins:
-    - name: request-termination
-      config:
-        status_code: 307
-    - name: response-transformer
-      config:
-        add:
-          headers:
-            - 'Location: {{authorize-endpoint}}'
   - name: argonaut-token-route
     paths:
     - /token
@@ -39,6 +26,14 @@ services:
         token_timeout: 10000
         static_refresh_token: {{static-refresh-token}}
         static_icn: {{static-icn}}
+    - name: request-termination
+              config:
+                status_code: 307
+    - name: response-transformer
+              config:
+                add:
+                  headers:
+                    - 'Location: {{token-endpoint}}'
   - name: argonaut-base-api-route
     paths:
     - /api
@@ -53,6 +48,6 @@ services:
         static_icn: {{static-icn}}
         scope_validation_enabled: true
   - name: argonaut-metadata-route
-    paths: 
+    paths:
     - /api/metadata
     strip_path: false
