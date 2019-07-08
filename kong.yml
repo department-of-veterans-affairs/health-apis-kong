@@ -26,6 +26,14 @@ services:
         token_timeout: 10000
         static_refresh_token: {{static-refresh-token}}
         static_icn: {{static-icn}}
+            - name: request-termination
+              config:
+                status_code: 307
+            - name: response-transformer
+              config:
+                add:
+                  headers:
+                    - 'Location: {{token-endpoint}}'
   - name: argonaut-base-api-route
     paths:
     - /api
