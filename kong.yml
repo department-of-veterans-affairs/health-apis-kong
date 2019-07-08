@@ -26,10 +26,10 @@ services:
         token_timeout: 10000
         static_refresh_token: {{static-refresh-token}}
         static_icn: {{static-icn}}
-            - name: request-termination
+    - name: request-termination
               config:
                 status_code: 307
-            - name: response-transformer
+    - name: response-transformer
               config:
                 add:
                   headers:
