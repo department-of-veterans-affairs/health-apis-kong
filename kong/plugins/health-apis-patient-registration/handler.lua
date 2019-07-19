@@ -32,6 +32,19 @@ function HealthApisPatientRegistration:new()
   HealthApisPatientRegistration.super.new(self, "health-apis-patient-registration")
 end
 
+function HealthApisPatientRegistration.split(str, delimiter)
+  local result = { }
+  local from  = 1
+  local delim_from, delim_to = string.find( str, delimiter, from  )
+  while delim_from do
+    table.insert( result, string.sub( str, from , delim_from-1 ) )
+    from  = delim_to + 1
+    delim_from, delim_to = string.find( str, delimiter, from  )
+  end
+  table.insert( result, string.sub( str, from  ) )
+  return result
+end
+
 function HealthApisPatientRegistration:access(conf)
   kong.log.info("Patient registration")
   HealthApisPatientRegistration.super.access(self)
@@ -66,6 +79,39 @@ function HealthApisPatientRegistration:access(conf)
   local client = http.new()
   client:set_timeout(self.conf.token_timeout)
 
+
+  if (body_data ~= nill) then
+    kong.log.info("BODY " .. body_data)
+  end
+
+  local authorization=ngx.req.get_headers()["Authorization"]
+  if (authorization ~= nil) then
+    kong.log.err("AUTH " .. authorization)
+    local base64_auth = string.gsub(authorization, "^Basic ","")
+    local decoded_auth = ngx.decode_base64(base64_auth)
+    kong.log.err("DECODED " .. decoded_auth)
+    local client_id_and_secret = HealthApisPatientRegistration.split(decoded_auth,":")
+    -- TODO check array size
+    local client_id=client_id_and_secret[1]
+    local client_secret=client_id_and_secret[2]
+    kong.log.err("WOW " .. client_id .. " / " .. client_secret)
+    -- WE WANT:
+    -- grant_type=authorization_code&code=3IWCfkyg7smhg_3PsUdr&redirect_uri=https%3A%2F%2Fapp%2Fafter-auth&client_id=0oa2dmpuz9fMYIujw2p7&client_secret=XTDgBe7S3iXOCDL7Wc8H49H43NJnX5FT6RoTcjwR
+    -- WE HAVE:
+    -- grant_type=authorization_code&code=Rn5saoHhFAIY-c1x7oD5&redirect_uri=https%3A%2F%2Fapp%2Fafter-auth&client_id=0oa2dmpuz9fMYIujw2p7
+    local grant_type=post_args["grant_type"]
+    local code=post_args["code"]
+    local redirect_uri="https%3A%2F%2Fapp%2Fafter-auth"
+    -- post_args["redirect_uri"]
+    body_data="grant_type=" .. grant_type
+      .. "&code=" .. code
+      .. "&redirect_uri=" .. redirect_uri
+      .. "&client_id=" .. client_id
+      .. "&client_secret=" .. client_secret
+    kong.log.info("BODY " .. body_data)
+  end
+  kong.log.info("BODY " .. body_data)
+
   kong.log.info("Requesting token from " .. self.conf.token_url)
   local token_res, err = client:request_uri(self.conf.token_url, {
     method = "POST",
@@ -99,7 +145,7 @@ function HealthApisPatientRegistration:access(conf)
   end
 
   local token_res_json = cjson.decode(token_res_body)
-  self:register_patient(token_res_json.patient)
+  -- self:register_patient(token_res_json.patient)
 
   return self:send_response(token_res_status, token_res_body)
 
