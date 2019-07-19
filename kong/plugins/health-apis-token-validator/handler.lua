@@ -35,10 +35,10 @@ local SCOPE_MISMATCH = "Token not granted requested scope."
 
 function HealthApisTokenValidator:new()
   HealthApisTokenValidator.super.new(self, "health-apis-token-validator")
-
 end
 
 function HealthApisTokenValidator:access(conf)
+  kong.log.info("Validating token")
   HealthApisTokenValidator.super.access(self)
 
   self.conf = conf
@@ -58,13 +58,13 @@ function HealthApisTokenValidator:access(conf)
     tokenIcn = responseJson.data.attributes["va_identifiers"].icn
     responseScopes = responseJson.data.attributes.scp
     self:check_scope(responseScopes)
-    
+
   end
 
   self:check_icn(tokenIcn)
 
   kong.service.request.set_header("X-VA-ICN", tokenIcn)
-
+  kong.log.info("Token validated and ICN header added to request")
 end
 
 function HealthApisTokenValidator:check_token()

@@ -5,11 +5,13 @@ function HealthApisStaticTokenHandler:new()
 end
 
 function HealthApisStaticTokenHandler:access(conf)
+  kong.log.info("Checking for static access token.")
   HealthApisStaticTokenHandler.super.access(self)
 
   self.conf = conf
 
   if (self.conf.static_refresh_token == nil) then
+    kong.log.info("Static refresh token not specified")
     return
   end
 
@@ -19,7 +21,7 @@ function HealthApisStaticTokenHandler:access(conf)
   local body, errors = ngx.req.get_post_args()
 
   if not body then
-    ngx.log(ngx.ERR, "failed to get post args: ", errors)
+    ngx.log(ngx.ERR, "Failed to get post args: ", errors)
     return
   end
 
@@ -29,11 +31,11 @@ function HealthApisStaticTokenHandler:access(conf)
     ngx.log(ngx.INFO, "Static refresh token requested")
     self:return_static_token()
   end
-
+  kong.log.debug("Done")
 end
 
 function HealthApisStaticTokenHandler:return_static_token()
-
+  kong.log.info("Returning static token")
   local staticTokenResponse = '{\n' ..
     '    "access_token": "' .. self.conf.static_access_token .. '",\n' ..
     '    "expires_in": ' .. self.conf.static_expiration .. ',\n' ..
