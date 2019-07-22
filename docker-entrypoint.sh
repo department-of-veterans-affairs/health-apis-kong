@@ -4,30 +4,38 @@ set -e
 # https://github.com/department-of-veterans-affairs/health-apis-devops/blob/master/operations/application-base/entrypoint.sh#L6-L27
 # Get files off s3 bucket
 #
-[ -z "$AWS_CONFIG_FOLDER" ] && AWS_CONFIG_FOLDER=$AWS_APP_NAME
-aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_APP_NAME/ /opt/va/ --recursive
+if [ "$AWS_CONFIG_FOLDER" == unused ]
+then
+  echo "Skipping AWS based configuration"
+else
+  echo "Loading AWS based configuration"
+  [ -z "$AWS_CONFIG_FOLDER" ] && AWS_CONFIG_FOLDER=$AWS_APP_NAME
+  aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_APP_NAME/ /opt/va/ --recursive
 
-# Copies kong.yml configuration from S3
-# Includes plugin configurations that cannot be commited to github
-# For local development, consider commenting out this line and instead
-# uncommenting the Dockerfile line - COPY kong.yml /etc/kong/kong.yml
-aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_CONFIG_FOLDER_KONG/ /etc/kong/ --recursive
+  # Copies kong.yml configuration from S3
+  # Includes plugin configurations that cannot be commited to github
+  # For local development, consider commenting out this line and instead
+  # uncommenting the Dockerfile line - COPY kong.yml /etc/kong/kong.yml
+  aws s3 cp s3://$AWS_BUCKET_NAME/$AWS_CONFIG_FOLDER_KONG/ /etc/kong/ --recursive
+fi
 
 #
 # Start up app and log activity
 # If a start up hook exists, execute it
 #
-cd /opt/va/
-
-HOOK=on-start.sh
-if [ -f $HOOK ]
+if [ -d /opt/va ]
 then
-  echo ============================================================
-  echo "Running start up HOOK"
-  chmod +x $HOOK
-  ./$HOOK
-  HOOK_STATUS=$?
-  [ $HOOK_STATUS != 0 ] && echo "Start up hook failed with status $HOOK_STATUS" && exit 1
+  cd /opt/va/
+  HOOK=on-start.sh
+  if [ -f $HOOK ]
+  then
+    echo ============================================================
+    echo "Running start up HOOK"
+    chmod +x $HOOK
+    ./$HOOK
+    HOOK_STATUS=$?
+    [ $HOOK_STATUS != 0 ] && echo "Start up hook failed with status $HOOK_STATUS" && exit 1
+  fi
 fi
 
 #################################################################################

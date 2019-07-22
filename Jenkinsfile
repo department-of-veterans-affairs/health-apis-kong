@@ -20,7 +20,7 @@ pipeline {
     stage('Building health-apis-kong image') {
       steps{
         script {
-          dockerImage = docker.build registry + ":0.1.$BUILD_NUMBER"
+          dockerImage = docker.build registry + ":1.0.$BUILD_NUMBER"
         }
       }
     }
@@ -37,7 +37,7 @@ pipeline {
     }
     stage('Remove Unused docker image') {
       steps{
-        sh "docker rmi $registry:0.1.$BUILD_NUMBER"
+        sh "docker rmi $registry:1.0.$BUILD_NUMBER"
       }
     }
   }
