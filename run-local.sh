@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+#
+# This script will
+# - Create a kong configuration based on the health-apis-data-query-deployment deployment
+#   unit configuration. It will substitue values found in ./secrets.conf.
+#   Do not encrypt secrets.conf
+# - Build the Kong container with a `local` tag
+# - Run the `local` Kong container using the generated kong configuration
+#
+
 cd $(dirname $0)
 
 unsupportedOs() {

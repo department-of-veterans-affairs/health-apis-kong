@@ -79,38 +79,10 @@ function HealthApisPatientRegistration:access(conf)
   local client = http.new()
   client:set_timeout(self.conf.token_timeout)
 
-
-  if (body_data ~= nill) then
-    kong.log.info("BODY " .. body_data)
-  end
-
-  local authorization=ngx.req.get_headers()["Authorization"]
-  if (authorization ~= nil) then
-    kong.log.err("AUTH " .. authorization)
-    local base64_auth = string.gsub(authorization, "^Basic ","")
-    local decoded_auth = ngx.decode_base64(base64_auth)
-    kong.log.err("DECODED " .. decoded_auth)
-    local client_id_and_secret = HealthApisPatientRegistration.split(decoded_auth,":")
-    -- TODO check array size
-    local client_id=client_id_and_secret[1]
-    local client_secret=client_id_and_secret[2]
-    kong.log.err("WOW " .. client_id .. " / " .. client_secret)
-    -- WE WANT:
-    -- grant_type=authorization_code&code=3IWCfkyg7smhg_3PsUdr&redirect_uri=https%3A%2F%2Fapp%2Fafter-auth&client_id=0oa2dmpuz9fMYIujw2p7&client_secret=XTDgBe7S3iXOCDL7Wc8H49H43NJnX5FT6RoTcjwR
-    -- WE HAVE:
-    -- grant_type=authorization_code&code=Rn5saoHhFAIY-c1x7oD5&redirect_uri=https%3A%2F%2Fapp%2Fafter-auth&client_id=0oa2dmpuz9fMYIujw2p7
-    local grant_type=post_args["grant_type"]
-    local code=post_args["code"]
-    local redirect_uri="https%3A%2F%2Fapp%2Fafter-auth"
-    -- post_args["redirect_uri"]
-    body_data="grant_type=" .. grant_type
-      .. "&code=" .. code
-      .. "&redirect_uri=" .. redirect_uri
-      .. "&client_id=" .. client_id
-      .. "&client_secret=" .. client_secret
-    kong.log.info("BODY " .. body_data)
-  end
-  kong.log.info("BODY " .. body_data)
+  -- Do the hack that switches requests from using basic auth for client_id and client_secret to
+  -- using a form encoded body
+  local body_with_creds = self:switch_from_basic_auth_to_body_credentials(post_args)
+  if (body_with_creds ~= nil) then body_data=body_with_creds end
 
   kong.log.info("Requesting token from " .. self.conf.token_url)
   local token_res, err = client:request_uri(self.conf.token_url, {
@@ -145,13 +117,73 @@ function HealthApisPatientRegistration:access(conf)
   end
 
   local token_res_json = cjson.decode(token_res_body)
-  -- self:register_patient(token_res_json.patient)
+  self:register_patient(token_res_json.patient)
 
   return self:send_response(token_res_status, token_res_body)
+end
+
+-- HACK: The Okta /token endpoint doesn't do well with client credentials specified as a
+-- basic Authorization header. This method will re-write the body to include credentials
+-- using the header information.
+-- Returns: nil if the body cannot be constructed.
+function HealthApisPatientRegistration:switch_from_basic_auth_to_body_credentials(post_args)
+  local authorization=ngx.req.get_headers()["Authorization"]
+  if (authorization == nil) then return nil end
+  kong.log.info("Switching request from basic authentication to client credentials in body")
+  local base64_auth = string.gsub(authorization, "^Basic ","")
+  if (base64_auth == nil) then
+    kong.log.info("Authorization is not Basic type")
+    return nil
+  end
+  local decoded_auth = ngx.decode_base64(base64_auth)
+  if (decoded_auth == nil) then
+    kong.log.warn("Failed to decode Authorization header")
+    return nil
+  end
+
+  local client_id_and_secret = HealthApisPatientRegistration.split(decoded_auth,":")
+  local client_id=client_id_and_secret[1]
+  if (client_id == nil) then
+    kong.log.warn("Missing client_id in Authorization header")
+    return nil
+  end
+
+  local client_secret=client_id_and_secret[2]
+  if (client_secret == nil) then
+    kong.log.warn("Missing client_secret in Authorization header")
+    return nil
+  end
+
+  local grant_type=post_args["grant_type"]
+  if (grant_type == nil) then
+    kong.log.warn("Missing grant_type in body")
+    return nil
+  end
+
+  local code=post_args["code"]
+  if (code == nil) then
+    kong.log.warn("Missing code in body")
+    return nil
+  end
+
+  local redirect_uri=post_args["redirect_uri"]
+  if (redirect_uri == nil) then
+    kong.log.warn("Missing redirect_uri in body")
+    return nil
+  end
+
+  return ngx.encode_args({
+    grant_type = grant_type,
+    code = code,
+    redirect_uri = redirect_uri,
+    client_id = client_id,
+    client_secret = client_secret
+  })
 
 end
 
 function HealthApisPatientRegistration:register_patient(patient_icn)
+  if (self.conf.register_patient == false) then return end
 
   if (patient_icn == nil) then
     return self:send_fhir_response(500, MISSING_ICN)
