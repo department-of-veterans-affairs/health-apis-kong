@@ -46,16 +46,19 @@ SECRETS=$(pwd)/secrets.conf
 # to run with local applications.
 #
 DEV_CONF=$(pwd)/dev-kong.yaml
-
-(
-  echo "Loading $SECRETS"
-  . $SECRETS
-  cat $SOURCE_CONF | envsubst > $DEV_CONF
-)
-sed -i \
-    -e "s/ids:8082/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8089/" \
-    -e "s/data-query:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8090/" \
-    $DEV_CONF
+if [ "${DEV_CONF_KEEP:-false}" == "false" ]
+then
+  (
+    echo "Loading $SECRETS"
+    . $SECRETS
+    echo "Writing $DEV_CONF"
+    cat $SOURCE_CONF | envsubst > $DEV_CONF
+  )
+  sed -i \
+      -e "s/ids:8082/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8089/" \
+      -e "s/data-query:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8090/" \
+      $DEV_CONF
+fi
 
 IMAGE_NAME=health-api-kong:local
 docker build -t $IMAGE_NAME .
