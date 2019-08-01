@@ -5,8 +5,8 @@ function HealthApisStaticTokenHandler:new()
 end
 
 function HealthApisStaticTokenHandler:access(conf)
-  kong.log.info("Checking for static access token.")
   HealthApisStaticTokenHandler.super.access(self)
+  kong.log.info("Checking for static access token.")
 
   self.conf = conf
 
@@ -31,7 +31,7 @@ function HealthApisStaticTokenHandler:access(conf)
     ngx.log(ngx.INFO, "Static refresh token requested")
     self:return_static_token()
   end
-  kong.log.debug("Done")
+  kong.log.info("Static Access Complete")
 end
 
 function HealthApisStaticTokenHandler:return_static_token()
@@ -44,7 +44,7 @@ function HealthApisStaticTokenHandler:return_static_token()
     '    "scope": "' .. self.conf.static_scopes .. '",\n' ..
     '    "patient": "' .. self.conf.static_icn .. '"\n' ..
     '}'
-
+  
   self:send_response(200, staticTokenResponse)
 
 end
@@ -56,7 +56,7 @@ function HealthApisStaticTokenHandler:send_response(status_code, message)
   ngx.header["Content-Type"] = "application/json"
   ngx.say(message)
   ngx.exit(status_code)
-  
+
 end
 
 

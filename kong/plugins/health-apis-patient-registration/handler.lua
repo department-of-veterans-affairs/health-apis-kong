@@ -46,9 +46,8 @@ function HealthApisPatientRegistration.split(str, delimiter)
 end
 
 function HealthApisPatientRegistration:access(conf)
-  kong.log.info("Patient registration")
   HealthApisPatientRegistration.super.access(self)
-
+  kong.log.info("Patient registration")
   self.conf = conf
 
   if (self.conf.ids_url == nil) then

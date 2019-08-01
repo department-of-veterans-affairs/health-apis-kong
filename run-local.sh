@@ -23,6 +23,7 @@ EOF
 case $(uname) in
   # https://docs.docker.com/docker-for-mac/networking/
   Darwin) HOST_ACCESSIBLE_FROM_WITHIN_DOCKER=host.docker.internal;;
+  Linux) HOST_ACCESSIBLE_FROM_WITHIN_DOCKER=172.17.0.1;;
   *) unsupportedOs;;
 esac
 
