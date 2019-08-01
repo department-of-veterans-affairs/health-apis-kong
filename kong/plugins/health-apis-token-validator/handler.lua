@@ -38,12 +38,13 @@ function HealthApisTokenValidator:new()
 end
 
 function HealthApisTokenValidator:access(conf)
-  kong.log.info("Validating token")
   HealthApisTokenValidator.super.access(self)
+  kong.log.info("Validating token")
 
   self.conf = conf
 
   if (ngx.req.get_headers()["Authorization"] == nil) then
+    kong.log.info("Missing header: Authorization")
     return self:send_response(401, INVALID_TOKEN)
   end
 
@@ -51,6 +52,7 @@ function HealthApisTokenValidator:access(conf)
   local tokenIcn = nil
 
   if (token == self.conf.static_token) then
+    kong.log.info("Static token")
     tokenIcn = self.conf.static_icn
   else
     local responseJson = self:check_token()
@@ -72,6 +74,8 @@ function HealthApisTokenValidator:check_token()
   local client = http.new()
   client:set_timeout(self.conf.verification_timeout)
 
+  kong.log.info("Checking token with " .. self.conf.verification_url);
+
   local verification_res, err = client:request_uri(self.conf.verification_url, {
     method = "GET",
     ssl_verify = false,
@@ -83,6 +87,8 @@ function HealthApisTokenValidator:check_token()
   })
 
   if not verification_res then
+    kong.log.error("Missing verification response" .. err)
+    ngx.say("failed to request: ", err)
     -- Error making request to validate endpoint
     return self:send_response(404, BAD_VALIDATE_ENDPOINT)
   end
@@ -91,6 +97,8 @@ function HealthApisTokenValidator:check_token()
   -- So we can be done with the connection
   local verification_res_status = verification_res.status
   local verification_res_body = verification_res.body
+
+  kong.log.info("Verification response is " .. verification_res.status)
 
   -- If unauthorized, we block the user
   if (verification_res_status == 401) then
@@ -142,12 +150,15 @@ end
 
 function HealthApisTokenValidator:check_for_array_entry(array, entry)
 
+  local scopes = "";
   for k, v in pairs(array) do
+    scopes=scopes .. " " .. v
     if (v == entry) then
+      kong.log.info("Found scope " .. v)
       return true
     end
   end
-
+  kong.log.info("Did not find scope '" .. entry .. "' in " .. scopes);
   return false
 end
 
@@ -235,6 +246,7 @@ end
 -- Format and send the response to the client
 function HealthApisTokenValidator:send_response(status_code, message)
 
+  kong.log.info("Responding with " .. status_code .. ":" .. message)
   ngx.status = status_code
   ngx.header["Content-Type"] = TYPE_JSON
 
