@@ -150,12 +150,15 @@ end
 
 function HealthApisTokenValidator:check_for_array_entry(array, entry)
 
+  local scopes = "";
   for k, v in pairs(array) do
+    scopes=scopes .. " " .. v
     if (v == entry) then
+      kong.log.info("Found scope " .. v)
       return true
     end
   end
-
+  kong.log.info("Did not find scope '" .. entry .. "' in " .. scopes);
   return false
 end
 
