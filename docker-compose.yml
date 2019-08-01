@@ -3,13 +3,13 @@ services:
   kong:
     image: "health-apis-kong:latest"
     environment:
-      KONG_ADMIN_ACCESS_LOG: /dev/stdout
-      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ACCESS_LOG: '/dev/stdout'
+      KONG_ADMIN_ERROR_LOG: '/dev/stderr'
       KONG_ADMIN_LISTEN: '0.0.0.0:8001'
       KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
-      KONG_PROXY_ACCESS_LOG: /dev/stdout
-      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_PROXY_ACCESS_LOG: '/dev/stdout'
+      KONG_PROXY_ERROR_LOG: '/dev/stderr'
       KONG_PLUGINS: request-termination,response-transformer,health-apis-token-validator,health-apis-static-token-handler,health-apis-patient-registration
       AWS_CONFIG_FOLDER: kong
       AWS_APP_NAME: kong
