@@ -99,6 +99,7 @@ function HealthApisTokenValidator:check_token()
   local verification_res_body = verification_res.body
 
   kong.log.info("Verification response is " .. verification_res.status)
+  kong.log.info(verification_res_body)
 
   -- If unauthorized, we block the user
   if (verification_res_status == 401) then
