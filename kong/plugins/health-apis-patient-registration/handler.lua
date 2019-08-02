@@ -159,26 +159,48 @@ function HealthApisPatientRegistration:switch_from_basic_auth_to_body_credential
     return nil
   end
 
-  local code=post_args["code"]
-  if (code == nil) then
-    kong.log.warn("Missing code in body")
-    return nil
+  -- one of two possibilities:
+  -- 1. grant_type=authorization_code & code & redirect_uri are specified for token exchange
+  -- 2. grant_type=refresh_token & refresh_token are specified for token refresh
+
+  local body=nil
+  kong.log.info("grant_type is " .. grant_type)
+  if ( grant_type == "authorization_code" ) then
+    local code=post_args["code"]
+    if (code == nil) then
+      kong.log.warn("Missing code in body")
+      return nil
+    end
+
+    local redirect_uri=post_args["redirect_uri"]
+    if (redirect_uri == nil) then
+      kong.log.warn("Missing redirect_uri in body")
+      return nil
+    end
+
+    body = {
+      grant_type = grant_type,
+      code = code,
+      redirect_uri = redirect_uri,
+      client_id = client_id,
+      client_secret = client_secret
+    }
+  elseif (  grant_type == "refresh_token" ) then
+    local refresh_token=post_args["refresh_token"]
+    if (refresh_token == nil) then
+      kong.log.warn("Missing refresh_token in body")
+      return nil
+    end
+
+    body = {
+      grant_type = grant_type,
+      refresh_token = refresh_token,
+      client_id = client_id,
+      client_secret = client_secret
+    }
   end
 
-  local redirect_uri=post_args["redirect_uri"]
-  if (redirect_uri == nil) then
-    kong.log.warn("Missing redirect_uri in body")
-    return nil
-  end
-
-  return ngx.encode_args({
-    grant_type = grant_type,
-    code = code,
-    redirect_uri = redirect_uri,
-    client_id = client_id,
-    client_secret = client_secret
-  })
-
+  return ngx.encode_args( body )
 end
 
 function HealthApisPatientRegistration:register_patient(patient_icn)

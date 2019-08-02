@@ -72,7 +72,7 @@ docker run \
   -e "KONG_ADMIN_LISTEN=0.0.0.0:8001" \
   -e "KONG_DATABASE=off"\
   -e "KONG_DECLARATIVE_CONFIG=/etc/kong/kong.yml" \
-  -e "KONG_LOG_LEVEL=debug" \
+  -e "KONG_LOG_LEVEL=info" \
   -e "KONG_PROXY_ACCESS_LOG=/dev/stdout" \
   -e "KONG_PROXY_ERROR_LOG=/dev/stderr"\
   -e "KONG_PLUGINS=request-termination,response-transformer,health-apis-token-validator,health-apis-static-token-handler,health-apis-patient-registration" \
