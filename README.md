@@ -1,107 +1,159 @@
 # health-apis-kong
 
-## health-apis Kong image
+This project provides a customized Kong image that adds custom plugins as well
+as an `on-start.sh` script from AWS S3.
 
-A custom Dockerfile builds on the base Kong image.  It adds the custom plugins as well as an `on-start.sh` script from AWS S3.
+### AWS S3 backed start up
+When the Health APIs Kong image starts. If the AWS environment variables are
+specified, configuration will be pulled from the S3 bucket and applied kong.
+If a special file `on-start.sh` is available in the S3 bucket and folder, this
+script will be executed _prior_ to launching Kong. This script can be used to
+customize Kong.
 
-## health-apis-token-validator Kong Plugin
+## Plugin: health-apis-token-validator
 
-A Kong plugin to validate a supplied OAuth token.  It can be installed on a Kong instance and configured to run against the entire instance, specific API's, or specific routes.
+A Kong plugin to validate a supplied OAuth token.  It can be installed on a Kong
+instance and configured to run against the entire instance, specific API's, or
+specific routes. This plugin also specifies the header `X-VA-ICN` to ICN of the
+patient making the request.
 
-### Building
-
-### Configuration
-
-Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
-
+#### Configuration
 ```
-{
-    "name": "health-apis-token-validator",
-    "config": {
-        "verification_url": "{verification-url}",
-        "verification_timeout": {verification-timeout},
-        "api_key": "{api-key}",
-        "static_token": "{static-token}",
-        "static_icn": "{static-icn}",
-        "custom_scope_validation_enabled": "{custom-scope-validation-enabled}"
-        "custom_scope": "{custom-scope}"
-    },
-    "enabled": true
-}
+verification_url - The OAuth token validation URL
+verification_timeout - How long to wait in milliseconds while verifying
+verification_host - The value of the Host header to send while verifying token
+static_token - The value of the static test token
+static_icn - The ICN that is associated with the test patient
+api_key - OAuth API key
 ```
 
-
-
-## health-apis-static-token-handler Kong Plugin
-
-A Kong plugin to return a static access token used for customer testing
-
-### Configuration
-
-Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
-
+Advanced test usage
 ```
-{
-    "name": "health-apis-static-token-handler",
-    "config": {
-        "static_refresh_token": "{static-refresh-token}",
-        "static_scopes": "{static-scopes}",
-        "static_access_token": "{static-access-token}",
-        "static_expiration": 3599,
-        "static_icn": "{static-icn}"
-    },
-    "enabled": true
-}
+custom_scope_validation_enabled - If true, custom scopes will be used instead of those provided in the OAuth request
+custom_scope - The resource name of the custom scope used to override normal scope processing
 ```
 
-## health-apis-patient-registration Kong Plugin
+---
+
+## Plugin: health-apis-static-token-handler
+This plugin enables static token support to the OAuth token exchange flow.
+This plugin is generally applied to it's own route, e.g. `/token` and provided
+as the OAuth token exchange endpoint.
+
+This plugin works in conjunction with `health-apis-token-validator`. Together,
+these plugins allow access to single configured test patient that avoid normal
+OAuth flow by allowing test machinery to be pre-configured with a predetermined
+test access code.
+
+
+```
+static_refresh_token - The OAuth refresh token for the static test patient
+static_access_token - The OAuth access token for the static test patient
+static_expiration - Age before static token expires
+static_icn - The test patient ICN associated with the static token
+static_scopes - OAuth scopes applied to the static token
+```
+
+---
+
+## Plugin: health-apis-patient-registration
 
 This Kong plugin serves two purposes.
-1. Handle patient registration with the Identity Service as part of the access token retrieval.
-   This can be disabled in the plugin configuration, set `register_patient = false`.
-2. Implement a work around to limitations with the Okta OAuth server that is rejected Access token requests
-   to `/token` where the `client_id` and `client_secret` are passed as a Basic Authentication header.
-   This work around will convert the `Authorization` header in to a client credentials in the post body.
-
-### Configuration
-
-Once the plugin is installed on the Kong instance, it can be configured via the Admin port.  Replace config entries with the correct values for your environment.
+1. Handle patient registration with the Identity Service as part of the access
+   token retrieval. This can be disabled in the plugin configuration, set
+   `register_patient = false`.
+2. Implement a work around to limitations with the Okta OAuth server that is
+   rejected Access token requests to `/token` where the `client_id` and
+   `client_secret` are passed as a Basic Authentication header. This work
+   around will convert the `Authorization` header in to a client credentials i
+   n the post body.
 
 ```
-{
-    "name": "health-apis-patient-registration",
-    "config": {
-        "register_patient": true
-        "ids_url": "{ids-endpoint}/api/v1/ids"
-        "token_url": "{token-endpoint}'"
-        "token_timeout": "10000"
-        "static_refresh_token": "{static-refresh-token}",
-        "static_icn": "{static-icn}"
-    },
-    "enabled": true
-}
+register_patient - (`true`|`false`) Indicates whether registration is enabled.
+ids_url - The URL of the identity service
+token_url - The URL of the OAuth token exchange endpoint
+token_timeout - Number of milliseconds to wait while exchanging the token
+static_refresh_token - The OAuth refresh token for the static test patient
+static_icn - The test patient ICN associated with the static token
 ```
 
-> Note:  The static patient still needs to register with the Identity Service, so that use case requires the additional config values.
+> Note:  The static patient still needs to register with the Identity Service.
+
+---
+## Plugin: health-apis-doppelganger
+
+This plugin allows requests for one user be swapped with results from a test user.
+It is used to allow developers with ID.me accounts but no VA records be swapped to
+allow access to test data.
+This plugin will replace known 'doppelganger' ICNs (typically ICNs of developers or
+support staff) in incomming HTTP requests with a known test patient user
+Responses will reverse the translation so that links or ICNs in the response
+can be presented in terms of the original request.
+
+An example:
+I am a developer with an ID.me account but no records at the VA. My ICN is 999.
+This plugin is configured such that 999 is a registered doppelganger for test
+patient 123. Using the Apple Health app, I make a request for /Condition?patient=999
+This plugin will request Condition?patient=123 instead. Just prior to returning the
+response,  all occurrences of patient 123 are replaced with 999 to allow links
+to continue to work.
+
+
+##### WARNING
+This plugin assumes that ICNs are unique enough to not naturally occur in text.
+For example, the ICN 1017283132V631076 is easily recogized and replaced with
+1011537977V693883 using simple string replacement techniques.
+
+```
+target_icn - the target test patient ICN
+doppelgangers - array of developer ICNs that are considered doppelganges of the
+target_icn test patient
+```
+
+---
+### Example
+
+```
+plugins:
+ - name: health-apis-doppelganger
+   config:
+     target_icn: 111222333V000999
+     doppelgangers:
+     - "1028283132V7777777"
+     - "1013283132V8888888"
+     - "1017284442V9999999"
+ - name: health-apis-token-validator
+   config:
+     verification_url: https://dev-api.va.gov/internal/auth/v0/validation
+     verification_timeout: 10000
+     api_key: ABC123
+     static_token: 5@t1C
+     static_icn: 111222333V000999
+- name: argonaut-token-route
+ paths:
+ - /token
+ strip_path: false
+ plugins:
+ - name: health-apis-static-token-handler
+   config:
+     static_refresh_token: r3fr35H
+     static_access_token: 5@t1C
+     static_expiration: 3599
+     static_icn: 111222333V000999
+     static_scopes: "launch/patient offline_access patient/Patient.read patient/Medication.read patient/Condition.read patient/Immunization.read patient/AllergyIntolerance.read patient/MedicationOrder.read patient/MedicationStatement.read patient/Procedure.read patient/Observation.read patient/DiagnosticReport.read patient/Encounter.read patient/Location.read"
+ - name: health-apis-patient-registration
+   config:
+     register_patient: false
+     ids_url: http://ids:8089/api/v1/ids
+     token_url: https://dev-api.va.gov/oauth2/token
+     token_timeout: 10000
+     static_refresh_token: r3fr35H
+```
+
+---
 
 ## Local development
 
-Local development can be done one of two ways:
-1. The hard way
-2. The magical way
-
-#### The Hard Way
-A docker-compose script exists for local development of plugins.  
-
-`COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/` in the Dockerfile copies the custom plugins into the image.
-
-> Note:  Uncomment `COPY kong.yml /etc/kong/kong.yml` in the Dockerfile to utilize the local kong.yml, otherwise it will pull from S3 and not include your configurations.  Also in the `docker-entrypoint.sh`, comment out the `aws` file copying and the `cd /opt/va` since that directory will not exist. 
-
-Ensure you first build `docker build -t health-apis-kong:latest .` to test your changes.
-
-`docker-compose up`
-
-#### The Magical Way
 1. Clone `health-apis-data-query-deployment` to this repo's parent directory, `../health-apis-data-query-deployment`
 2. Create ./secrets.conf using variables defined for kong in the deployment unit.
    These values should *not* be encrypted
