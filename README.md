@@ -156,9 +156,9 @@ plugins:
 
 1. Clone `health-apis-data-query-deployment` to this repo's parent directory, `../health-apis-data-query-deployment`
 2. Create ./secrets.conf using variables defined for kong in the deployment unit.
-   These values should *not* be encrypted
-   See `../health-apis-data-query-deployment/lab.conf` as an example.
+   These values should *not* be encrypted. See example below.
 3. Run `./run-local.sh`
+
 
 Notes:
 - The Kong container application will be built using a `local` tag
@@ -166,7 +166,22 @@ Notes:
 - It will generate a Kong configuration based on the Data Query deployment unit and volume mount
 - It will expose ports `8000`, `8001`, `8443`, and `8444`
 
-##### Disclaimer
+---
+
+#### Example Generating `secrets.conf`
+The lab configuration makes a good starting point as an example since it allows connectivity to the
+Mitre database.
+
+```
+pushd ../../health-apis-data-query-deployment
+../health-apis-deployer/toolkit/dtk decrypt
+popd
+grep " KONG_" ../health-apis-data-query-deployment/lab.conf > secrets.conf
+```
+
+
+---
+#### Disclaimer
 The `run-local.sh` needs to know details about the platform your running on to properly configure Kong.
 For example, to access locally running applications on Apple's OS X platform, the hostname of the services
 must be `host.docker.internal`. If your platform is not currently supported by `run-local.sh`, it will
