@@ -27,6 +27,7 @@ local OPERATIONAL_OUTCOME_TEMPLATE =
   '}'
 
 local INVALID_TOKEN = "invalid token."
+local TOO_MANY_REQUESTS = "Too many requests."
 local BAD_VALIDATE_ENDPOINT = "Validate endpoint not found."
 local VALIDATE_ERROR = "Error validating token."
 local ICN_MISSING = "Patient identifier not supplied."
@@ -87,7 +88,7 @@ function HealthApisTokenValidator:check_token()
   })
 
   if not verification_res then
-    kong.log.error("Missing verification response" .. err)
+    kong.log.err("Missing verification response" .. err)
     ngx.say("failed to request: ", err)
     -- Error making request to validate endpoint
     return self:send_response(404, BAD_VALIDATE_ENDPOINT)
@@ -104,6 +105,12 @@ function HealthApisTokenValidator:check_token()
   -- If unauthorized, we block the user
   if (verification_res_status == 401) then
     return self:send_response(401, INVALID_TOKEN)
+  end
+
+  -- If authorization service is too busy, we need to tell the user to slow down
+  if (verification_res_status == 429) then
+    kong.log.err("Authorization request has been throttled")
+    return self:send_response(429, TOO_MANY_REQUESTS)
   end
 
   -- An unexpected condition
