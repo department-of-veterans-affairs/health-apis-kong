@@ -130,7 +130,7 @@ function HealthApisTokenValidator:check_icn(tokenIcn)
   -- For DQ we need to disallow complex patient searches, e.g. /Patient?name=xxx&gender=female
   -- So for Patient resources, we will require that an ICN be supplied in the request
   if (requestIcn == nil and self:get_requested_resource_type() == "Patient") then
-    ngx.log(ngx.INFO, "Requested ICN does not match token")
+    ngx.log(ngx.INFO, "Patient searching not allowed.")
     return self:send_response(403, PATIENT_SEARCH_NOT_ALLOWED)
   end
 
