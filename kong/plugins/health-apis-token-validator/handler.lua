@@ -33,6 +33,7 @@ local VALIDATE_ERROR = "Error validating token."
 local ICN_MISSING = "Patient identifier not supplied."
 local TOKEN_MISMATCH = "Token not allowed access to this patient."
 local SCOPE_MISMATCH = "Token not granted requested scope."
+local PATIENT_SEARCH_NOT_ALLOWED = "Patient searching disabled."
 
 function HealthApisTokenValidator:new()
   HealthApisTokenValidator.super.new(self, "health-apis-token-validator")
@@ -126,6 +127,13 @@ function HealthApisTokenValidator:check_icn(tokenIcn)
 
   local requestIcn = self:get_request_icn()
 
+  -- For DQ we need to disallow complex patient searches, e.g. /Patient?name=xxx&gender=female
+  -- So for Patient resources, we will require that an ICN be supplied in the request
+  if (requestIcn == nil and self:get_requested_resource_type() == "Patient") then
+    ngx.log(ngx.INFO, "Patient searching not allowed.")
+    return self:send_response(403, PATIENT_SEARCH_NOT_ALLOWED)
+  end
+
   if (requestIcn == nil) then
     if (self:is_request_search()) then
       return self:send_response(403, ICN_MISSING)
@@ -140,10 +148,10 @@ end
 function HealthApisTokenValidator:check_scope(tokenScope)
 
   local requestedResource = nil
-  
+
   if (self.conf.custom_scope_validation_enabled) then
     requestedResource = self.conf.custom_scope
-  else 
+  else
     requestedResource = self:get_requested_resource_type()
   end
 
@@ -185,7 +193,7 @@ function HealthApisTokenValidator:is_request_read()
   if (string.match(ngx.var.uri, "/[%w]+$") == "/search") then
     return false
   end
-  
+
   -- Note: This works for the Urgent Care resource as a side effect of
   -- the "%a*" (any *letter* repeating) rejects /r4/{resource} as a read
   local requestedResourceRead = string.match(ngx.var.uri, "/%a*/[%w%-]+$")
@@ -197,7 +205,6 @@ function HealthApisTokenValidator:is_request_search()
 end
 
 function HealthApisTokenValidator:get_request_icn()
-
   if (self:is_request_read()) then
     return self:get_read_icn()
   else
