@@ -5,8 +5,6 @@ FROM kong:1.1.2
 RUN apk update && apk add bash && apk add curl && apk add --update py-pip
 
 # When running docker container, user must set the following unset variables at runtime
-ENV AWS_ACCESS_KEY_ID=unset
-ENV AWS_SECRET_ACCESS_KEY=unset
 ENV AWS_DEFAULT_REGION=unset
 ENV AWS_BUCKET_NAME=unset
 
