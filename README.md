@@ -110,6 +110,23 @@ doppelgangers - array of developer ICNs that are considered doppelganges of the
 target_icn test patient
 ```
 
+## Plugin: health-apis-token-protected-operation
+
+
+
+#### Configuration
+```
+request_header_key - (required) The name of the header that kong should expect
+  to see in the request (i.e. raw)
+allowed_tokens - (required) An array of allowed token values (should have
+  comments as to who uses each token)
+application_header_key - The header that kong should send to the application
+  (If this field is not provided, the plugin assumes request_header_key and
+    overwrites its value)
+sends_unauthorized - Boolean telling kong whether or not it should send a 401
+  Operation Outcome message to the user (Defaults to true)
+```
+
 ---
 ### Example
 
@@ -148,6 +165,12 @@ plugins:
      token_url: https://dev-api.va.gov/oauth2/token
      token_timeout: 10000
      static_refresh_token: r3fr35H
+  - name: health-apis-token-protected-operation
+    config:
+      request_header_key: protectedOp
+      allowed_tokens: ["orange", "shanktopus"]
+      application_header_key: appHeader
+      sends_unauthorized: false
 ```
 
 ---

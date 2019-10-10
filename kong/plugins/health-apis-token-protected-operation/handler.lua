@@ -38,16 +38,16 @@ function HealthApisTokenProtectedOperation:access(conf)
 
   kong.log.info("Validating Token Received Under Header: " .. tokenHeaderKey)
 
-  -- If a separate header value is provided for the application then we will use that
-  -- otherwise, we'll just set the already existing header value to be a boolean.
-  appHeader = tokenHeaderKey
-  if (self.conf.application_header_key ~= nil) then
-    appHeader = self.conf.application_header_key
-  end
-
+  -- Invalid Until Proven Valid
+  isValidToken = false
   self:validateToken()
 
-  -- If we get here, we checked a token. Let's make sure we preform necessary
+  -- Set the boolean header if one was given in the configuration
+  if (self.conf.send_boolean_header ~= nil) then
+    kong.service.request.set_header(self.conf.send_boolean_header, isValidToken)
+  end
+
+  -- If we get here, we checked a token. Let's make sure we perform necessary
   -- actions if its invalid.
   self:takeActionForInvalidToken()
 
@@ -59,13 +59,10 @@ end
 -- plugins configration
 --
 function HealthApisTokenProtectedOperation:validateToken()
-  -- Default response for boolean header will be false
-  kong.service.request.set_header(appHeader, "false")
-
   for i,token in ipairs(self.conf.allowed_tokens) do
     if (token == tokenHeaderValue) then
       kong.log.info("Header:[" .. tokenHeaderKey .. "] has valid token.")
-      kong.service.request.set_header(appHeader, "true")
+      isValidToken = true
       break
     end
   end
@@ -80,10 +77,10 @@ end
 -- plain-jane data-query request instead of the raw response)
 --
 function HealthApisTokenProtectedOperation:takeActionForInvalidToken()
-  if (ngx.req.get_headers()[appHeader] == "false") then
+  if (isValidToken == false) then
     kong.log.info("Header:[" .. tokenHeaderKey .. "] has an invalid token.")
     if (self.conf.sends_unauthorized == true) then
-      local invalidTokenString = "Invalid token for header: " .. tokenHeaderKey
+      local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
       self:SendOperationOutcome(401, invalidTokenString)
     else
       kong.log.info("Falling through to default method.")
