@@ -28,6 +28,9 @@ function HealthApisTokenProtectedOperation:access(conf)
 
   -- If request doesnt contain header, skip
   if (tokenHeaderValue == nil) then
+    -- Make sure nobodys getting around validation by setting the application
+    -- header without the request header
+    self:setApplicationHeader(false)
     return
   end
 
@@ -42,10 +45,7 @@ function HealthApisTokenProtectedOperation:access(conf)
   isValidToken = false
   self:validateToken()
 
-  -- Set the boolean header if one was given in the configuration
-  if (self.conf.send_boolean_header ~= nil) then
-    kong.service.request.set_header(self.conf.send_boolean_header, isValidToken)
-  end
+  self:setApplicationHeader(isValidToken)
 
   -- If we get here, we checked a token. Let's make sure we perform necessary
   -- actions if its invalid.
@@ -81,7 +81,7 @@ function HealthApisTokenProtectedOperation:takeActionForInvalidToken()
     kong.log.info("Header:[" .. tokenHeaderKey .. "] has an invalid token.")
     if (self.conf.sends_unauthorized == true) then
       local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
-      self:SendOperationOutcome(401, invalidTokenString)
+      self:sendOperationOutcome(401, invalidTokenString)
     else
       kong.log.info("Falling through to default method.")
     end
@@ -91,9 +91,19 @@ function HealthApisTokenProtectedOperation:takeActionForInvalidToken()
 end
 
 --
+-- Set the boolean application header if one was given in the configuration
+--
+function HealthApisTokenProtectedOperation:setApplicationHeader(value)
+  if (self.conf.send_boolean_header ~= nil) then
+    kong.service.request.set_header(self.conf.send_boolean_header, value)
+  end
+-- end of HealthApisTokenProtectedOperation:setApplicationHeader()
+end
+
+--
 -- Sends an operationOutcome to the user with a given status code and message value
 --
-function HealthApisTokenProtectedOperation:SendOperationOutcome(statusCode, message)
+function HealthApisTokenProtectedOperation:sendOperationOutcome(statusCode, message)
   local OPERATIONAL_OUTCOME_TEMPLATE =
     '{ "resourceType": "OperationOutcome",\n' ..
     '  "id": "exception",\n' ..
