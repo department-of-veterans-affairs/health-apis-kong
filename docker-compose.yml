@@ -17,7 +17,7 @@ services:
         - health-apis-token-validator
         - health-apis-static-token-handler
         - health-apis-patient-registration
-        - health-apis-token-header-handler
+        - health-apis-token-protected-operation
       AWS_CONFIG_FOLDER: kong
       AWS_APP_NAME: kong
     ports:
