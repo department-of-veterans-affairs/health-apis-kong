@@ -112,7 +112,24 @@ target_icn test patient
 
 ## Plugin: health-apis-token-protected-operation
 
+This plugin allows the addition of headers that, when added, are validated using
+a list of accepted tokens. The plugin allows for either sending the header and
+token along, or for sending the application a separate boolean header value based
+on whether or not the token was in the list of valid tokens. While validating the
+header value, this plugin also has an option to allow the header through regardless
+of token validity (can map to a different operation in the application.)
 
+An example:
+In the case of returning raw results, we want to allow only certain users to get
+records back. Therefore, a configuration would use the header 'raw' with a token
+to validate the user is allowed access to raw data. For a raw response, we want
+to pass the application a boolean to check for, not the full token, so the
+send_boolean_header configuration would be set to something like 'rawAppHeader' so
+that the application can use that value instead of the 'raw' header that contains
+the token value. Finally, if the token is invalid, we don't want to send back a
+401 with an operation outcome, so we can set sends_unauthorized to false and
+write code in the application to send back a regular fhir compliant response
+when the token is invalid.
 
 #### Configuration
 ```
@@ -120,9 +137,9 @@ request_header_key - (required) The name of the header that kong should expect
   to see in the request (i.e. raw)
 allowed_tokens - (required) An array of allowed token values (should have
   comments as to who uses each token)
-application_header_key - The header that kong should send to the application
-  (If this field is not provided, the plugin assumes request_header_key and
-    overwrites its value)
+send_boolean_header - The header that kong should send to the application
+  (If this field is not provided, the plugin assumes request_header_key is the
+    only needed value and passes it along to the application with the token.)
 sends_unauthorized - Boolean telling kong whether or not it should send a 401
   Operation Outcome message to the user (Defaults to true)
 ```
