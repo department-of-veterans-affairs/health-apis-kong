@@ -23,8 +23,8 @@ function HealthApisTokenProtectedOperation:access(conf)
 
   self.conf = conf
 
-  tokenHeaderKey = self.conf.request_header_key
-  tokenHeaderValue = ngx.req.get_headers()[tokenHeaderKey]
+  local tokenHeaderKey = self.conf.request_header_key
+  local tokenHeaderValue = ngx.req.get_headers()[tokenHeaderKey]
 
   -- If request doesnt contain header, skip
   if (tokenHeaderValue == nil) then
@@ -41,15 +41,15 @@ function HealthApisTokenProtectedOperation:access(conf)
 
   kong.log.info("Validating Token Received Under Header: " .. tokenHeaderKey)
 
-  -- Invalid Until Proven Valid
-  isValidToken = false
-  self:validateToken()
+  local tokenValid = self:validateToken(tokenHeaderKey, tokenHeaderValue)
 
-  self:setApplicationHeader(isValidToken)
+  self:setApplicationHeader(tokenValid)
 
   -- If we get here, we checked a token. Let's make sure we perform necessary
   -- actions if its invalid.
-  self:takeActionForInvalidToken()
+  if (tokenValid == false) then
+    self:takeActionForInvalidToken(tokenHeaderKey)
+  end
 
 -- end of HealthApisTokenProtectedOperation:access()
 end
@@ -58,7 +58,9 @@ end
 -- Validates the token against a list of allowed_tokens provided in the
 -- plugins configration
 --
-function HealthApisTokenProtectedOperation:validateToken()
+function HealthApisTokenProtectedOperation:validateToken(tokenHeaderKey, tokenHeaderValue)
+  -- Invalid Until Proven Valid
+  local isValidToken = false
   for i,token in ipairs(self.conf.allowed_tokens) do
     if (token == tokenHeaderValue) then
       kong.log.info("Header:[" .. tokenHeaderKey .. "] has valid token.")
@@ -66,6 +68,8 @@ function HealthApisTokenProtectedOperation:validateToken()
       break
     end
   end
+
+  return isValidToken
 
 -- end of HealthApisTokenProtectedOperation:validateToken()
 end
@@ -76,15 +80,13 @@ end
 -- Else falls through to the default method (ex. raw falls through to a
 -- plain-jane data-query request instead of the raw response)
 --
-function HealthApisTokenProtectedOperation:takeActionForInvalidToken()
-  if (isValidToken == false) then
-    kong.log.info("Header:[" .. tokenHeaderKey .. "] has an invalid token.")
-    if (self.conf.sends_unauthorized == true) then
-      local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
-      self:sendOperationOutcome(401, invalidTokenString)
-    else
-      kong.log.info("Falling through to default method.")
-    end
+function HealthApisTokenProtectedOperation:takeActionForInvalidToken(tokenHeaderKey)
+  kong.log.info("Header:[" .. tokenHeaderKey .. "] has an invalid token.")
+  if (self.conf.sends_unauthorized == true) then
+    local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
+    self:sendOperationOutcome(401, invalidTokenString)
+  else
+    kong.log.info("Falling through to default method.")
   end
 
 -- end of HealthApisTokenProtectedOperation:takeActionForInvalidToken()
