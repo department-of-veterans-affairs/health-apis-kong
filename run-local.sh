@@ -64,6 +64,11 @@ fi
 IMAGE_NAME=health-api-kong:local
 docker build -t $IMAGE_NAME .
 
+PLUGIN_ARRAY=('request-termination' 'response-transformer' \
+  'health-apis-token-validator' 'health-apis-static-token-handler' \
+  'health-apis-patient-registration' 'health-apis-doppelganger' \
+  'health-apis-token-protected-operation')
+
 docker run \
   --rm \
   -it \
@@ -75,7 +80,7 @@ docker run \
   -e "KONG_LOG_LEVEL=info" \
   -e "KONG_PROXY_ACCESS_LOG=/dev/stdout" \
   -e "KONG_PROXY_ERROR_LOG=/dev/stderr"\
-  -e "KONG_PLUGINS=request-termination,response-transformer,health-apis-token-validator,health-apis-static-token-handler,health-apis-patient-registration,health-apis-doppelganger" \
+  -e "KONG_PLUGINS=$(echo ${PLUGIN_ARRAY[@]} | sed 's/ /,/g')" \
   -e "AWS_BUCKET_NAME=unused" \
   -e "AWS_CONFIG_FOLDER=unused" \
   -e "AWS_APP_NAME=kong" \
