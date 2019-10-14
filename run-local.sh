@@ -67,7 +67,7 @@ docker build -t $IMAGE_NAME .
 PLUGIN_ARRAY=('request-termination' 'response-transformer' \
   'health-apis-token-validator' 'health-apis-static-token-handler' \
   'health-apis-patient-registration' 'health-apis-doppelganger' \
-  'health-apis-token-protected-operation')
+  'health-apis-token-protected-operation' 'health-apis-patient-matching')
 
 docker run \
   --rm \
