@@ -42,7 +42,9 @@ function Doppelganger:access(conf)
          -- The doppelganger ID will be stored in the context to be used later.
          -- The absence of this information indicates that no additional processing is required
          ngx.ctx.doppelganger = me
-    --     kong.service.request.set_header("X-VA-ICN", conf.target_icn)
+         -- We need to override the client ICN with the doppelganger so that
+         -- the new payload can pass verification in health-apis-patient-matching.
+         kong.service.request.set_header("X-VA-ICN", conf.target_icn)
          kong.log.info("Doppelganger " .. doppelganger .. " for " .. conf.target_icn)
          local newPath = string.gsub(kong.request.get_path(),doppelganger,conf.target_icn)
          local newQuery = string.gsub(kong.request.get_raw_query(),doppelganger,conf.target_icn)

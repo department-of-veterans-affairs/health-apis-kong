@@ -1,11 +1,15 @@
 local HealthApisPatientMatching = require("kong.plugins.base_plugin"):extend()
 
+HealthApisPatientMatching.PRIORITY = 805 -- After the Doppelganger but before Response Transformer
+
+
 function HealthApisPatientMatching:new()
    HealthApisPatientMatching.super.new(self,"health-apis-patient-matching")
 end
 
 --
--- Remember our internal X-VA-ICN header values for later use
+-- Remember our internal X-VA-ICN header values for later use during
+-- patient matching validation.
 --
 function HealthApisPatientMatching:access(conf)
   HealthApisPatientMatching.super.access(self)
@@ -20,41 +24,70 @@ end
 -- If they match, allow the response through.
 -- If there is a mismatch, response with error code 403 Forbidden.
 --
-function HealthApisPatientMatching:header_filter(conf)
+function HealthApisPatientMatching:header_filter()
   local me = ngx.ctx.icnHeader
+
+  --
+  -- Pass through any downstream service failures. Proceed to patient matching
+  -- only on the 200 series status codes.
+  --
+  local status = kong.response.get_status()
+  if (status < 200 and status > 299) then
+    return
+  end
+
+  --
+  -- If we are missing the INCLUDES-ICN header, fail with 403 Forbidden.
+  --
   local included = kong.response.get_header("X-VA-INCLUDES-ICN")
   if (included == nil) then
-    kong.log.info("No X-VA-INCLUDES-ICN header was provided.")
-    ngx.ctx.matching = "MISSING"
+    kong.log.info("No X-VA-INCLUDES-ICN header was provided where expected.")
+    ngx.ctx.matching_failure = true
+    kong.response.set_status(403)
+    return
   end
+
+  --
+  -- If INCLUDES-ICN header is "NONE" then
+  -- patient data is NOT included in the payload.
+  -- Resources like Medication which are 'patient agnostic' will provide this.
+  -- In these cases, we are done here.
+  --
+  if (included == "NONE") then
+    kong.log.info("The response payload is patient agnostic.")
+    return
+  end
+
+  --
+  -- The header X-VA-ICN is not matching X-VA-INCLUDES-ICN.
+  -- Do not allow the client to have access to ICN's other than his own.
+  -- Fail with 403 Forbidden and an Operation Outcome.
+  --
   for word in string.gmatch(included, '([^,]+)') do
     if (word ~= me) then
       kong.log.info("Mismatched ICNs. Client ICN " .. me .. " does not equal an included ICN of " .. word)
-      ngx.ctx.matching = "MISMATCHED"
+      ngx.ctx.matching_failure = true
+      kong.response.set_status(403)
+      return
     end
-  kong.log.info("Matching ICNs. Client ICN " .. me .. " does equals the included ICN of " .. word)
+
+  kong.log.info("Matching ICNs. Client's provided ICN " .. me .. " equals response ICN of " .. word)
   end
 end
 
+--
+-- After the header_filter, the body_filter processes the response.
+-- Analyzing the context object ngx.ctx for matching failures, we
+-- now must prepare the payload if patient matching failed.
+-- We generate an Operational Outcome for 403 Forbidden,
+-- and remove the payload for any forbidden requests.
+-- Others pass through normally.
+--
 function HealthApisPatientMatching:body_filter(conf)
   HealthApisPatientMatching.super.body_filter(self)
-  self.conf = conf
 
-  local result = ngx.ctx.matching
-  kong.log.info("MATCHING STATE: " .. result)
-  if (result == nil) then return end
-  if (result == "MISSING") then
-    self.sendOperationOutcome(400, "Missing ICN.")
-  end
-  if (result == "MISMATCH") then
-    self.sendOperationOutcome(403, "Token not allowed access to this patient.")
-  end
-end
-
---
--- Sends an operationOutcome to the user with a given status code and message value
---
-function HealthApisPatientMatching:sendOperationOutcome(statusCode, message)
+  local ctx = ngx.ctx
+  local failure = ctx.matching_failure
   local OPERATIONAL_OUTCOME_TEMPLATE =
     '{ "resourceType": "OperationOutcome",\n' ..
     '  "id": "exception",\n' ..
@@ -72,16 +105,32 @@ function HealthApisPatientMatching:sendOperationOutcome(statusCode, message)
     '      }\n' ..
     '  ]\n' ..
     '}'
+  local message = "Token not allowed access to this patient."
 
-    kong.log.info("Responding with " .. statusCode .. ":" .. message)
-    ngx.status = statusCode
-    ngx.header["Content-Type"] = "application/json"
+  --
+  -- If Patient Matching detected no problems, then we allow the response through.
+  -- Else, we replace the response chunks with an Operational Outcome
+  -- wiping out the payload. Status code is set during the header_filter.
+  -- We cannot write to status_code in the body_filter.
+  --
+  if (not failure) then
+    return
+  else
+    local chunk, eof = ngx.arg[1], ngx.arg[2]
+    ctx.rt_body_chunks = ctx.rt_body_chunks or {}
+    ctx.rt_body_chunk_number = ctx.rt_body_chunk_number or 1
 
-    ngx.say(string.format(OPERATIONAL_OUTCOME_TEMPLATE, message, message))
-
-    ngx.exit(statusCode)
-
--- end of HealthApisPatientMatching:SendOperationOutcome()
+    if eof then
+       local body = nil
+         body = string.format(OPERATIONAL_OUTCOME_TEMPLATE, message, message)
+         kong.log.info("Setting OO: " .. body)
+       ngx.arg[1] = body
+    else
+       ctx.rt_body_chunks[ctx.rt_body_chunk_number] = chunk
+       ctx.rt_body_chunk_number = ctx.rt_body_chunk_number + 1
+       ngx.arg[1] = nil
+    end
+  end
 end
 
 return HealthApisPatientMatching;
