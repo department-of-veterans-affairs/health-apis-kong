@@ -62,21 +62,11 @@ function HealthApisPatientMatching:header_filter()
   -- If INCLUDES-ICN header is "NONE" then
   -- patient data is NOT included in the payload.
   -- Resources like Medication which are 'patient agnostic' will provide this.
+  -- Responses like empty bundles are also 'patient agnostic'.
   -- In these cases, we are done here.
   --
   if (included == "NONE") then
     kong.log.info("The response payload is patient agnostic.")
-    return
-  end
-
-
-  --
-  -- If INCLUDES-ICN header is "EMPTY" then
-  -- patient data is NOT included in the payload.
-  -- For this case, like an empty bundle, we are done here.
-  --
-  if (included == "EMPTY") then
-    kong.log.info("The response bundle is empty.")
     return
   end
 
