@@ -25,7 +25,6 @@ end
 -- If there is a mismatch, response with error code 403 Forbidden.
 --
 function HealthApisPatientMatching:header_filter()
-  local me = ngx.ctx.icnHeader
 
   --
   -- Pass through any downstream service failures. Proceed to patient matching
@@ -33,6 +32,18 @@ function HealthApisPatientMatching:header_filter()
   --
   local status = kong.response.get_status()
   if (status < 200 and status > 299) then
+    return
+  end
+
+  --
+  -- We did not recieve the private X-VA-ICN HEADER
+  -- Unable to verify patient-matching, we must 403 forbidden the payload.
+  --
+  local me = ngx.ctx.icnHeader
+  if(me == nil) then
+    kong.log.info("MISSING X-VA-ICN HEADER. CANNOT PROCEED WITH PATIENT MATCHING.")
+    ngx.ctx.matching_failure = true
+    kong.response.set_status(403)
     return
   end
 
@@ -55,6 +66,17 @@ function HealthApisPatientMatching:header_filter()
   --
   if (included == "NONE") then
     kong.log.info("The response payload is patient agnostic.")
+    return
+  end
+
+
+  --
+  -- If INCLUDES-ICN header is "EMPTY" then
+  -- patient data is NOT included in the payload.
+  -- For this case, like an empty bundle, we are done here.
+  --
+  if (included == "NONE") then
+    kong.log.info("The response bundle is empty.")
     return
   end
 
