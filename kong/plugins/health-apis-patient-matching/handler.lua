@@ -36,18 +36,6 @@ function HealthApisPatientMatching:header_filter()
   end
 
   --
-  -- We did not recieve the private X-VA-ICN HEADER
-  -- Unable to verify patient-matching, we must 403 forbidden the payload.
-  --
-  local me = ngx.ctx.icnHeader
-  if(me == nil) then
-    kong.log.info("MISSING X-VA-ICN HEADER. CANNOT PROCEED WITH PATIENT MATCHING.")
-    ngx.ctx.matching_failure = true
-    kong.response.set_status(403)
-    return
-  end
-
-  --
   -- If we are missing the INCLUDES-ICN header, fail with 403 Forbidden.
   --
   local included = kong.response.get_header("X-VA-INCLUDES-ICN")
@@ -67,6 +55,18 @@ function HealthApisPatientMatching:header_filter()
   --
   if (included == "NONE") then
     kong.log.info("The response payload is patient agnostic.")
+    return
+  end
+
+  --
+  -- We did not receive the private X-VA-ICN HEADER
+  -- Unable to verify patient-matching, we must 403 forbidden the payload.
+  --
+  local me = ngx.ctx.icnHeader
+  if(me == nil) then
+    kong.log.info("MISSING X-VA-ICN HEADER. CANNOT PROCEED WITH PATIENT MATCHING.")
+    ngx.ctx.matching_failure = true
+    kong.response.set_status(403)
     return
   end
 
@@ -100,6 +100,15 @@ function HealthApisPatientMatching:body_filter(conf)
 
   local ctx = ngx.ctx
   local failure = ctx.matching_failure
+
+  --
+  -- If Patient Matching detected no problems, then we allow the response through.
+  -- Else, we replace the response chunks with an Operational Outcome
+  -- wiping out the payload. Status code is set during the header_filter.
+  -- We cannot write to status_code in the body_filter.
+  --
+  if (not failure) then return end
+
   local OPERATIONAL_OUTCOME_TEMPLATE =
     '{ "resourceType": "OperationOutcome",\n' ..
     '  "id": "exception",\n' ..
@@ -119,30 +128,21 @@ function HealthApisPatientMatching:body_filter(conf)
     '}'
   local message = "Token not allowed access to this patient."
 
-  --
-  -- If Patient Matching detected no problems, then we allow the response through.
-  -- Else, we replace the response chunks with an Operational Outcome
-  -- wiping out the payload. Status code is set during the header_filter.
-  -- We cannot write to status_code in the body_filter.
-  --
-  if (not failure) then
-    return
-  else
-    local chunk, eof = ngx.arg[1], ngx.arg[2]
-    ctx.rt_body_chunks = ctx.rt_body_chunks or {}
-    ctx.rt_body_chunk_number = ctx.rt_body_chunk_number or 1
+  local chunk, eof = ngx.arg[1], ngx.arg[2]
+  ctx.rt_body_chunks = ctx.rt_body_chunks or {}
+  ctx.rt_body_chunk_number = ctx.rt_body_chunk_number or 1
 
-    if eof then
-       local body = nil
-         body = string.format(OPERATIONAL_OUTCOME_TEMPLATE, message, message)
-         kong.log.info("Setting OO: " .. body)
-       ngx.arg[1] = body
-    else
-       ctx.rt_body_chunks[ctx.rt_body_chunk_number] = chunk
-       ctx.rt_body_chunk_number = ctx.rt_body_chunk_number + 1
-       ngx.arg[1] = nil
-    end
+  if eof then
+     local body = nil
+       body = string.format(OPERATIONAL_OUTCOME_TEMPLATE, message, message)
+       kong.log.info("Setting OO: " .. body)
+     ngx.arg[1] = body
+  else
+     ctx.rt_body_chunks[ctx.rt_body_chunk_number] = chunk
+     ctx.rt_body_chunk_number = ctx.rt_body_chunk_number + 1
+     ngx.arg[1] = nil
   end
+
 end
 
 return HealthApisPatientMatching;

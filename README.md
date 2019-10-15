@@ -98,6 +98,26 @@ This plugin will request Condition?patient=123 instead. Just prior to returning 
 response,  all occurrences of patient 123 are replaced with 999 to allow links
 to continue to work.
 
+--
+## Plugin: health-apis-patient-matching
+
+This plugin will perform patient-matching validation on all downstream responses. (data-query, etc...) The plugin runs in the priority chain at priority 805, immediately
+after doppelganger but before the response transformer.
+
+The health-apis-patient-matching plugin will act as follows on any 200 series downstream response.
+(We fail through on non-200s)
+
+The plugin requires two headers,
+  `X-VA-ICN`- the client ICN provided internally by the health-apis-token-validator plugin.
+  `X-VA-INCLUDES-ICN` - a comma seperated string of icn's who's data is contained in the payload. This is provided, along with the payload, by the downstream service. (Ex: data-query)
+
+The health-apis-patient-matching plugin uses the following rules, in order:
+
+1. `X-VA-INCLUDES-ICN` is empty or missing, we 403 forbidden.
+2. `X-VA-INCLUDES-ICN` is "NONE" we know the payload is patient agnostic (empty bundle, medication, etc...) and will allow the response through
+3. `X-VA-ICN` is missing, we 403 forbidden. We don't know the clients icn. Something spooky happened.
+4. `X-VA-ICN` does not match exactly `X-VA-INCLUDES-ICN` we 403 forbidden.
+5. `X-VA-ICN` matches exactly `X-VA-INCLUDES-ICN`
 
 ##### WARNING
 This plugin assumes that ICNs are unique enough to not naturally occur in text.
