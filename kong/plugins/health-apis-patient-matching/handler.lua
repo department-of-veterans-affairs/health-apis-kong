@@ -75,7 +75,7 @@ function HealthApisPatientMatching:header_filter()
   -- patient data is NOT included in the payload.
   -- For this case, like an empty bundle, we are done here.
   --
-  if (included == "NONE") then
+  if (included == "EMPTY") then
     kong.log.info("The response bundle is empty.")
     return
   end
