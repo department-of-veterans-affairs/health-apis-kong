@@ -52,7 +52,7 @@ function HealthApisPatientMatching:header_filter()
   --
   local included = kong.response.get_header("X-VA-INCLUDES-ICN")
   if (included == nil) then
-    kong.log.info("No X-VA-INCLUDES-ICN header was provided where expected.")
+    kong.log.info("MISSING X-VA-INCLUDES-ICN HEADER. CANNOT PROCEED WITH PATIENT MATCHING")
     ngx.ctx.matching_failure = true
     kong.response.set_status(403)
     return
@@ -77,7 +77,7 @@ function HealthApisPatientMatching:header_filter()
   --
   for word in string.gmatch(included, '([^,]+)') do
     if (word ~= me) then
-      kong.log.info("Mismatched ICNs. Client ICN " .. me .. " does not equal an included ICN of " .. word)
+      kong.log.info("MISMATCHING ICNs. CLIENT ICN " .. me .. " DOES NOT EQUAL INCLUDED ICN OF " .. word)
       ngx.ctx.matching_failure = true
       kong.response.set_status(403)
       return
