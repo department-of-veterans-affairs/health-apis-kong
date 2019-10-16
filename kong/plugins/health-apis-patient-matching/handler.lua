@@ -63,7 +63,7 @@ function HealthApisPatientMatching:header_filter()
   -- Unable to verify patient-matching, we must 403 forbidden the payload.
   --
   local me = ngx.ctx.icnHeader
-  if(me == nil) then
+  if (me == nil) then
     kong.log.info("MISSING X-VA-ICN HEADER. CANNOT PROCEED WITH PATIENT MATCHING.")
     ngx.ctx.matching_failure = true
     kong.response.set_status(403)

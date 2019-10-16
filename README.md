@@ -109,7 +109,7 @@ The health-apis-patient-matching plugin will act as follows on any 200 series do
 
 The plugin requires two headers,
   `X-VA-ICN`- the client ICN provided internally by the health-apis-token-validator plugin.
-  `X-VA-INCLUDES-ICN` - a comma seperated string of icn's who's data is contained in the payload. This is provided, along with the payload, by the downstream service. (Ex: data-query)
+  `X-VA-INCLUDES-ICN` - The `XA-VA-INCLUDES-ICN` response header supports a comma-delimited list of ICNs in anticipation of system use-cases (e.g., clinician workflows), such that service implementations may be developed in advance of this plugin.
 
 The health-apis-patient-matching plugin uses the following rules, in order:
 
@@ -119,8 +119,12 @@ The health-apis-patient-matching plugin uses the following rules, in order:
 4. `X-VA-ICN` does not match exactly `X-VA-INCLUDES-ICN` we 403 forbidden.
 5. `X-VA-ICN` matches exactly `X-VA-INCLUDES-ICN`
 
+### NOTE:
+The health-apis-patient-matching plugin currently supports only an exact match of `X-VA-ICN` to `X-VA-INCLUDES-ICN`. This is overly protective in the case of larger scale clinician workflows, etc... Once these have a more concrete implementation/plan, this plugin will need to be revisted.
+
+
 ##### WARNING
-This plugin assumes that ICNs are unique enough to not naturally occur in text.
+The health-apis-token-protected-operation plugin assumes that ICNs are unique enough to not naturally occur in text.
 For example, the ICN 1017283132V631076 is easily recogized and replaced with
 1011537977V693883 using simple string replacement techniques.
 
