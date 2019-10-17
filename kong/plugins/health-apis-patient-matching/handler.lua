@@ -31,7 +31,7 @@ function HealthApisPatientMatching:header_filter()
   -- only on the 200 series status codes.
   --
   local status = kong.response.get_status()
-  if (status < 200 and status > 299) then
+  if (status < 200 or status > 299) then
     return
   end
 
