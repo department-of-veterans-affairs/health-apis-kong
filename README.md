@@ -98,9 +98,48 @@ This plugin will request Condition?patient=123 instead. Just prior to returning 
 response,  all occurrences of patient 123 are replaced with 999 to allow links
 to continue to work.
 
-
 ##### WARNING
 This plugin assumes that ICNs are unique enough to not naturally occur in text.
+For example, the ICN 1017283132V631076 is easily recogized and replaced with
+1011537977V693883 using simple string replacement techniques.
+
+```
+target_icn - the target test patient ICN
+doppelgangers - array of developer ICNs that are considered doppelganges of the
+target_icn test patient
+```
+
+
+---
+## Plugin: health-apis-patient-matching
+
+This plugin will perform patient-matching validation on all downstream responses. (data-query, etc...) The plugin runs in the priority chain at priority 805, immediately
+after doppelganger but before the response transformer.
+
+The health-apis-patient-matching plugin will act as follows on any 200 series downstream response.
+(We fail through on non-200s)
+
+The plugin requires two headers,
+  Request header `X-VA-ICN`- the client ICN provided internally by the health-apis-token-validator plugin.
+  Response header `X-VA-INCLUDES-ICN` - a comma seperated string of icn's who's data is contained in the payload. This is provided, along with the payload, by the downstream service, e.g. data-query
+
+NOTE: The `XA-VA-INCLUDES-ICN` response header supports a comma delimited list of ICNs in anticipation of system use cases, e.g. clinician workflows. So that service implementations may develop in advance of this plugin. At this time, the plugin only validates the single ICN uses cases needed for patient-centric access.
+
+
+The health-apis-patient-matching plugin uses the following rules, in order:
+
+1. `X-VA-INCLUDES-ICN` is empty or missing, we 403 forbidden.
+2. `X-VA-INCLUDES-ICN` is "NONE" we know the payload is patient agnostic (empty bundle, medication, etc...) and will allow the response through
+3. `X-VA-ICN` is missing, we 403 forbidden. We don't know the clients icn. Something spooky happened.
+4. `X-VA-ICN` does not match exactly the ICN value in the `X-VA-INCLUDES-ICN` we return 403 forbidden.
+5. `X-VA-ICN` matches exactly `X-VA-INCLUDES-ICN`
+
+### NOTE:
+The health-apis-patient-matching plugin currently supports only an exact match of `X-VA-ICN` to `X-VA-INCLUDES-ICN`. This is overly protective in the case of larger scale clinician workflows, etc... Once these have a more concrete implementation/plan, this plugin will need to be revisted.
+
+
+##### WARNING
+The health-apis-token-protected-operation plugin assumes that ICNs are unique enough to not naturally occur in text.
 For example, the ICN 1017283132V631076 is easily recogized and replaced with
 1011537977V693883 using simple string replacement techniques.
 
