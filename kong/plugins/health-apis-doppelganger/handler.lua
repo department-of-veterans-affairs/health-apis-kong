@@ -64,7 +64,7 @@ end
 --- until we finish the body... at which point we don't have access to the headers.
 ---
 function Doppelganger:header_filter()
-   if (doppelganger == nil) then return end
+   if (ngx.ctx.doppelganger == nil) then return end
    kong.response.clear_header('Content-Length')
 end
 
@@ -97,7 +97,5 @@ function Doppelganger:body_filter(conf)
       ngx.arg[1] = nil
    end
 end
-
-
 
 return Doppelganger
