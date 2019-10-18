@@ -57,6 +57,18 @@ function Doppelganger:access(conf)
    end
 end
 
+
+---
+--- If the target ICN and the Doppelganger ICN are not the same length, the Content-Length
+--- will be wrong. We don't actually know how long the response will be and can't tell
+--- until we finish the body... at which point we don't have access to the headers.
+---
+function Doppelganger:header_filter()
+   if (doppelganger == nil) then return end
+   kong.response.clear_header('Content-Length')
+end
+
+
 --
 -- The response is processed if the `doppelganger` attribute is set on the context.
 -- Response body chunks are accumulated, then occurrences to the target test patient
