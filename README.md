@@ -181,6 +181,10 @@ send_boolean_header - The header that kong should send to the application
     only needed value and passes it along to the application with the token.)
 sends_unauthorized - Boolean telling kong whether or not it should send a 401
   Operation Outcome message to the user (Defaults to true)
+allow_if_header_is_missing - Boolean that if set to true, will allow requests
+  if the header is missing. This can be useful for situations where the header
+  can be used to trigger additional behavior, but it is still valid to request
+  with out it. (Defaults to false)
 ```
 
 ---
@@ -227,6 +231,7 @@ plugins:
       allowed_tokens: ["orange", "shanktopus"]
       application_header_key: appHeader
       sends_unauthorized: false
+      allow_if_header_is_missing: false
 ```
 
 ---

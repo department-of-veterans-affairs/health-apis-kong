@@ -26,12 +26,17 @@ function HealthApisTokenProtectedOperation:access(conf)
   local tokenHeaderKey = self.conf.request_header_key
   local tokenHeaderValue = ngx.req.get_headers()[tokenHeaderKey]
 
+
   -- If request doesnt contain header, skip
   if (tokenHeaderValue == nil) then
-    -- Make sure nobodys getting around validation by setting the application
-    -- header without the request header
-    self:setApplicationHeader(false)
-    return
+    if ( self.conf.allow_if_header_is_missing == true ) then
+      -- Make sure nobodys getting around validation by setting the application
+      -- header without the request header
+      self:setApplicationHeader(false)
+      return
+    else
+       tokenHeaderValue = ''
+    end
   end
 
 --
