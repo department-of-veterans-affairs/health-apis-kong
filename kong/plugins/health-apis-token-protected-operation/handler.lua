@@ -26,12 +26,17 @@ function HealthApisTokenProtectedOperation:access(conf)
   local tokenHeaderKey = self.conf.request_header_key
   local tokenHeaderValue = ngx.req.get_headers()[tokenHeaderKey]
 
+
   -- If request doesnt contain header, skip
   if (tokenHeaderValue == nil) then
-    -- Make sure nobodys getting around validation by setting the application
-    -- header without the request header
-    self:setApplicationHeader(false)
-    return
+    if (self.conf.allow_empty_header == true) then
+      -- Make sure nobodys getting around validation by setting the application
+      -- header without the request header
+      self:setApplicationHeader(false)
+      return
+    else
+       tokenHeaderValue = ''
+    end
   end
 
 --
@@ -75,20 +80,12 @@ function HealthApisTokenProtectedOperation:validateToken(tokenHeaderKey, tokenHe
 end
 
 --
--- Determines if a token is invalid and, if so, what action to take.
--- If the sends_unauthorized configuration is set, sends a 401
--- Else falls through to the default method (ex. raw falls through to a
--- plain-jane data-query request instead of the raw response)
+-- send a 401
 --
 function HealthApisTokenProtectedOperation:takeActionForInvalidToken(tokenHeaderKey)
   kong.log.info("Header:[" .. tokenHeaderKey .. "] has an invalid token.")
-  if (self.conf.sends_unauthorized == true) then
-    local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
-    self:sendOperationOutcome(401, invalidTokenString)
-  else
-    kong.log.info("Falling through to default method.")
-  end
-
+  local invalidTokenString = "Invalid token for request header: " .. tokenHeaderKey
+  self:sendOperationOutcome(401, invalidTokenString)
 -- end of HealthApisTokenProtectedOperation:takeActionForInvalidToken()
 end
 

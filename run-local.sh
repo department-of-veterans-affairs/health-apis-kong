@@ -2,15 +2,12 @@
 
 #
 # This script will
-# - Create a kong configuration based on the health-apis-data-query-deployment deployment
-#   unit configuration. It will substitue values found in ./secrets.conf.
-#   Do not encrypt secrets.conf
-# - Build the Kong container with a `local` tag
-# - Run the `local` Kong container using the generated kong configuration
 #
 
 cd $(dirname $0)
 
+
+#============================================================
 unsupportedOs() {
   cat<<EOF
 Well... this is awkward, but I don't know how to work on your operating system.
@@ -19,47 +16,116 @@ host system that is accessible from within docker containers.
 EOF
   exit 1
 }
-
 case $(uname) in
   # https://docs.docker.com/docker-for-mac/networking/
   Darwin) HOST_ACCESSIBLE_FROM_WITHIN_DOCKER=host.docker.internal;;
   Linux) HOST_ACCESSIBLE_FROM_WITHIN_DOCKER=172.17.0.1;;
   *) unsupportedOs;;
 esac
+#============================================================
 
-DQ_DEPLOYMENT=$(find .. -name health-apis-data-query-deployment -type d | head -1)
-[ -z "$DQ_DEPLOYMENT" ] && echo "Cannot find health-apis-data-query-deployment" && exit 1
 
-SOURCE_CONF=$DQ_DEPLOYMENT/s3/kong/kong.yml
-[ ! -f $SOURCE_CONF ] && echo "Cannot find $SOURCE_CONF" && exit 1
+usage() {
+cat<<EOF
 
-SECRETS=$(pwd)/secrets.conf
-[ ! -f $SECRETS ] && echo "Cannot find $SECRETS" && exit 1
+$0 [options]
 
-#
-# We are going to stuff DEV_CONF into the docker container, but
-# first we want to copy the configuration used in production from
-# data-query. We'll need to provide values for the environment variables
-# which includes secrets. We'll assume the user has a `secrets.conf`
-# file locally (not committed to git)
-#
-# After we do environment substitution, we'll need to make a few changes
-# to run with local applications.
-#
-DEV_CONF=$(pwd)/dev-kong.yaml
-if [ "${DEV_CONF_KEEP:-false}" == "false" ]
-then
+Build and run Kong locally.
+- Create a kong configuration based on an existing kong deployment
+  unit configuration. It will substitue values found in ./secrets.conf.
+  Do not encrypt secrets.conf
+- Build the Kong container with a `local` tag
+- Run the `local` Kong container using the generated kong configuration
+
+Options:
+ --debug                       Enable debugging output
+ -d, --deployment-unit <name>  Specify the deployment unit name
+ -h, --help                    Display this help and exit
+ --dq                          Alias: -d health-apis-data-query-deployment
+ --bulk                        Alias: -d health-apis-bulk-fhir-deployment
+$1
+EOF
+  exit 1
+}
+
+
+USE_THIS_YAML=
+DU_NAME=
+
+ARGS=$(getopt -n $(basename ${0}) \
+    -l "debug,help,deplyment-unit:,dq,bulk,yaml:" \
+    -o "hd:y:" -- "$@")
+[ $? != 0 ] && usage
+eval set -- "$ARGS"
+while true
+do
+  case "$1" in
+    --debug) set -x;;
+    -h|--help) usage "halp! what this do?";;
+    -y|--yaml) USE_THIS_YAML="$2";;
+    -d|--deplyment-unit) DU_NAME="$2";;
+    --dq) DU_NAME=health-apis-data-query-deployment;;
+    --bulk) DU_NAME=health-apis-bulk-fhir-deployment;;
+    --) shift;break;;
+  esac
+  shift;
+done
+
+
+copyConfFromDeployment() {
+  [ -z "$DU_NAME" ] && usage "Deployment unit not specified"
+  DU_DEPLOYMENT=$(find .. -name $DU_NAME -type d | head -1)
+  [ -z "$DU_DEPLOYMENT" ] && echo "Cannot find $DU_NAME in $(readlink -f ..)" && exit 1
+
+  SOURCE_CONF=$DU_DEPLOYMENT/s3/kong/kong.yml
+  [ ! -f $SOURCE_CONF ] && echo "Cannot find $DU_DEPLOYMENT/s3/kong/kong.yml" && exit 1
+
+  SECRETS=$(pwd)/secrets.conf
+  [ ! -f $SECRETS ] && echo "Cannot find $SECRETS" && exit 1
+
+  DEV_CONF=$(pwd)/dev-kong.yaml
+  #
+  # We are going to stuff DEV_CONF into the docker container, but
+  # first we want to copy the configuration used in production from
+  # data-query. We'll need to provide values for the environment variables
+  # which includes secrets. We'll assume the user has a `secrets.conf`
+  # file locally (not committed to git)
+  #
+  # After we do environment substitution, we'll need to make a few changes
+  # to run with local applications.
+  #
   (
     echo "Loading $SECRETS"
     . $SECRETS
     echo "Writing $DEV_CONF"
     cat $SOURCE_CONF | envsubst > $DEV_CONF
   )
+  #
+  # I wish this didn't know about server/port mappings...
+  #
   sed -i \
       -e "s/ids:8082/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8089/" \
       -e "s/data-query:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8090/" \
+      -e "s/incredible-bulk:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8091/" \
       $DEV_CONF
+}
+
+
+useSpecifiedYaml() {
+  DEV_CONF=$(readlink -f $USE_THIS_YAML)
+  echo "Using $DEV_CONF"
+}
+
+if [ -n "$USE_THIS_YAML" ]
+then
+  useSpecifiedYaml
+elif [ -n "$DU_NAME" ]
+then
+  copyConfFromDeployment
 fi
+
+
+[ -z "$DEV_CONF" ] && usage "You must specify --yaml or --deployment-unit"
 
 IMAGE_NAME=health-api-kong:local
 docker build -t $IMAGE_NAME .
