@@ -29,7 +29,7 @@ function HealthApisTokenProtectedOperation:access(conf)
 
   -- If request doesnt contain header, skip
   if (tokenHeaderValue == nil) then
-    if ( self.conf.allow_empty_header == true ) then
+    if (self.conf.allow_empty_header == true) then
       -- Make sure nobodys getting around validation by setting the application
       -- header without the request header
       self:setApplicationHeader(false)
