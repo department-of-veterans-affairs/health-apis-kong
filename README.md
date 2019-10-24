@@ -228,8 +228,7 @@ plugins:
       request_header_key: protectedOp
       allowed_tokens: ["orange", "shanktopus"]
       application_header_key: appHeader
-      sends_unauthorized: false
-      allow_if_header_is_missing: false
+      allow_empty_header: false
 ```
 
 ---
