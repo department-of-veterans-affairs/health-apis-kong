@@ -14,6 +14,7 @@ services:
       KONG_PLUGINS:
         - request-termination
         - response-transformer
+        - request-transformer
         - health-apis-token-validator
         - health-apis-static-token-handler
         - health-apis-patient-registration
