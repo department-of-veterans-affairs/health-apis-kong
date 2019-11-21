@@ -82,8 +82,6 @@ function Doppelganger:body_filter(conf)
    if (doppelganger == nil) then return end
    local chunk, eof = ngx.arg[1], ngx.arg[2]
 
-   kong.log.info("Chunk " .. chunk)
-
    ctx.rt_body_chunks = ctx.rt_body_chunks or {}
    ctx.rt_body_chunk_number = ctx.rt_body_chunk_number or 1
 
