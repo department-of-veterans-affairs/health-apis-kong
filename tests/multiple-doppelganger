@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+
+set -u
+
+
+cat <<EOF
+
+SET UP
+
+- Start Data Query connected to Synthetic Database
+- Start Kong using Data Query configuration except for noted below
+- Login lab users to obtain tokens by running 'lab-login' test
+  Set LAB_TOKENS variable to the location of the 'lab-users.txt' file that produced
+
+This configuration will create two doppelganges
+- 1017283148V813263 -> 17000151 for all resources
+- 1011537977V693883 -> 43000199 for all resource except Procedure
+- 1011537977V693883 -> 17000151 for Procedure
+
+PLUGIN CONFIGURATION
+
+    - name: health-apis-doppelganger
+      config:
+        mappings:
+        - path: .*/Procedure
+          doppelgangers:
+          - target_icn: "17000151"
+            doppelganger: "43000199"
+          - target_icn: "17000151"
+            doppelganger: "1017283148V813263"
+          - target_icn: "17000151"
+            doppelganger: "1011537977V693883"
+        - path: .*
+          doppelgangers:
+          - target_icn: "17000151"
+            doppelganger: "1017283148V813263"
+          - target_icn: "43000199"
+            doppelganger: "1011537977V693883"
+          - target_icn: "17000151"
+            doppelganger: "1044576700V905273"
+          - target_icn: "17000151"
+            doppelganger: "1011537977V999999"
+
+EOF
+
+read -p "YOU WILL PROMPTED TO COMPARE RESULTS LATER. PRESS ENTER TO START"
+
+MAGIC_DOPPELGANGER=1011537977V693883
+OAUTH_DOPPELGANGER=1017283148V813263
+OAUTH_DOPPELGANGER_EMAIL=vasdvp+IDME_05@gmail.com
+OAUTH_DOPPELGANGER_TOKEN=
+
+TARGET_1=43000199
+TARGET_1_EMAIL=va.api.user+idme.119@gmail.com
+TARGET_1_TOKEN=
+
+TARGET_2=17000151
+TARGET_2_EMAIL=va.api.user+idme.169@gmail.com
+TARGET_2_TOKEN=
+
+
+tokenFor() {
+  local email=$1
+  grep $email $LAB_USERS | sed 's/^.* - \(.*\) -.*$/\1/'
+}
+loadTokens() {
+  echo "Loading tokens"
+  OAUTH_DOPPELGANGER_TOKEN=$(tokenFor $OAUTH_DOPPELGANGER_EMAIL)
+  TARGET_1_TOKEN=$(tokenFor $TARGET_1_EMAIL)
+  TARGET_2_TOKEN=$(tokenFor $TARGET_2_EMAIL)
+}
+
+[ -n "$LAB_USERS" ] && loadTokens
+[ -z "$OAUTH_DOPPELGANGER_TOKEN" ] && echo "Missing OAUTH_DOPPELGANGER_TOKEN" && exit 1
+[ -z "$TARGET_1_TOKEN" ] && echo "Missing TARGET_1_TOKEN" && exit 1
+[ -z "$TARGET_2_TOKEN" ] && echo "Missing TARGET_2_TOKEN" && exit 1
+
+auth() { echo "Authorization: Bearer $1"; }
+
+search() {
+  local resource=$1
+  local patient=$2
+  local token=$3
+  curl \
+    -ks \
+    -H "$(auth $token)" \
+    https://localhost:8443/dstu2/$resource?patient=$patient \
+    | jq . \
+    | tee $resource.$patient.json
+}
+
+
+
+search Condition $MAGIC_DOPPELGANGER $LIGHTHOUSE_TOKEN
+search Procedure $MAGIC_DOPPELGANGER $LIGHTHOUSE_TOKEN
+search Condition $OAUTH_DOPPELGANGER $OAUTH_DOPPELGANGER_TOKEN
+search Procedure $OAUTH_DOPPELGANGER $OAUTH_DOPPELGANGER_TOKEN
+search Condition $TARGET_1 $TARGET_1_TOKEN
+search Procedure $TARGET_1 $TARGET_1_TOKEN
+search Condition $TARGET_2 $TARGET_2_TOKEN
+search Procedure $TARGET_2 $TARGET_2_TOKEN
+
+
+
+diff Procedure.$TARGET_1.json Procedure.$TARGET_2.json
+read -p "$TARGET_1 AND $TARGET_2 PROCEDURES SHOULD LOOK THE SAME (except for IDs) "
+
+diff Procedure.$TARGET_1.json Procedure.$MAGIC_DOPPELGANGER.json
+read -p "$TARGET_1 AND $MAGIC_DOPPELGANGER PROCEDURES SHOULD LOOK THE SAME (except for IDs) "
+
+diff Procedure.$TARGET_1.json Procedure.$OAUTH_DOPPELGANGER.json
+read -p "$TARGET_1 AND $OAUTH_DOPPELGANGER PROCEDURES SHOULD LOOK THE SAME (except for IDs) "
+
+diff Condition.$MAGIC_DOPPELGANGER.json Condition.$TARGET_1.json
+read -p "$TARGET_1 AND $MAGIC_DOPPELGANGER CONDITIONS SHOULD LOOK THE SAME (except for IDs) "
+
+diff Condition.$OAUTH_DOPPELGANGER.json Condition.$TARGET_2.json
+read -p "$TARGET_2 AND $OAUTH_DOPPELGANGER CONDITIONS SHOULD LOOK THE SAME (except for IDs) "
+
+
+diff Condition.$MAGIC_DOPPELGANGER.json Condition.$TARGET_2.json
+read -p "$TARGET_2 AND $MAGIC_DOPPELGANGER CONDITIONS SHOULD LOOK DIFFERENT"

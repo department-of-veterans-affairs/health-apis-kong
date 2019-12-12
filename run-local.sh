@@ -38,11 +38,12 @@ Build and run Kong locally.
 - Run the `local` Kong container using the generated kong configuration
 
 Options:
+ --bulk                        Alias: -d health-apis-bulk-fhir-deployment
  --debug                       Enable debugging output
+ --dq                          Alias: -d health-apis-data-query-deployment
  -d, --deployment-unit <name>  Specify the deployment unit name
  -h, --help                    Display this help and exit
- --dq                          Alias: -d health-apis-data-query-deployment
- --bulk                        Alias: -d health-apis-bulk-fhir-deployment
+ -y, --yaml <file>             Use this Kong configuration file
 $1
 EOF
   exit 1

@@ -37,26 +37,40 @@ function Doppelganger:access(conf)
    Doppelganger.super.access(self)
    local me = kong.request.get_header("X-VA-ICN")
    if (me == nil) then return end
-   for i,doppelganger in ipairs(conf.doppelgangers) do
-      if (me == doppelganger) then
-         -- The doppelganger ID will be stored in the context to be used later.
-         -- The absence of this information indicates that no additional processing is required
-         ngx.ctx.doppelganger = me
-         -- We need to override the client ICN with the doppelganger so that
-         -- the new payload can pass verification in health-apis-patient-matching.
-         kong.service.request.set_header("X-VA-ICN", conf.target_icn)
-         kong.log.info("Doppelganger " .. doppelganger .. " for " .. conf.target_icn)
-         local newPath = string.gsub(kong.request.get_path(),doppelganger,conf.target_icn)
-         local newQuery = string.gsub(kong.request.get_raw_query(),doppelganger,conf.target_icn)
-         kong.log.info("Changing " .. kong.request.get_path() .. "?" .. kong.request.get_raw_query()
-                       .. " to " .. newPath .. "?" .. newQuery)
-         kong.service.request.set_path(newPath)
-         kong.service.request.set_raw_query(newQuery)
-         break
-      end
-   end
+   local mapping = self:findMappingForPath(conf,kong.request.get_path())
+   if (mapping == nil) then return end
+   local targetIcn = self:findTargetIcnForDoppelganger(mapping,me)
+   if (targetIcn == nil) then return end
+   -- The doppelganger ID will be stored in the context to be used later.
+   -- The absence of this information indicates that no additional processing is required
+   ngx.ctx.doppelganger = me
+   ngx.ctx.targetIcn = targetIcn
+   -- We need to override the client ICN with the doppelganger so that
+   -- the new payload can pass verification in health-apis-patient-matching.
+   kong.service.request.set_header("X-VA-ICN", targetIcn)
+   kong.log.info("Doppelganger " .. ngx.ctx.doppelganger .. " for " .. targetIcn .. " on path " .. mapping.path)
+   local newPath = string.gsub(kong.request.get_path(),ngx.ctx.doppelganger,targetIcn)
+   local newQuery = string.gsub(kong.request.get_raw_query(),ngx.ctx.doppelganger,targetIcn)
+   kong.log.info("Changing " .. kong.request.get_path() .. "?" .. kong.request.get_raw_query()
+                    .. " to " .. newPath .. "?" .. newQuery)
+   kong.service.request.set_path(newPath)
+   kong.service.request.set_raw_query(newQuery)
 end
 
+function Doppelganger:findTargetIcnForDoppelganger(mapping,me)
+   for i,entry in ipairs(mapping.doppelgangers) do
+      if (entry.doppelganger == me) then return entry.target_icn end
+   end
+   return nil
+end
+
+function Doppelganger:findMappingForPath(conf,path)
+   for i,mapping in ipairs(conf.mappings) do
+      kong.log.info("checking path " .. mapping.path .. " against " .. path)
+      if (string.match(path,mapping.path) ~= nil) then return mapping end
+   end
+   return nil
+end
 
 ---
 --- If the target ICN and the Doppelganger ICN are not the same length, the Content-Length
@@ -79,7 +93,9 @@ function Doppelganger:body_filter(conf)
    local ctx = ngx.ctx
 
    local doppelganger = ctx.doppelganger
+   local targetIcn = ctx.targetIcn
    if (doppelganger == nil) then return end
+   if (targetIcn == nil) then return end
    local chunk, eof = ngx.arg[1], ngx.arg[2]
 
    ctx.rt_body_chunks = ctx.rt_body_chunks or {}
@@ -87,7 +103,7 @@ function Doppelganger:body_filter(conf)
 
    if eof then
       local chunks = table.concat(ctx.rt_body_chunks)
-      local body = string.gsub(chunks,conf.target_icn,doppelganger)
+      local body = string.gsub(chunks,targetIcn,doppelganger)
       ngx.arg[1] = body or chunks
    else
       ctx.rt_body_chunks[ctx.rt_body_chunk_number] = chunk
