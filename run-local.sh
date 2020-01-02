@@ -64,7 +64,7 @@ do
     --debug) set -x;;
     -h|--help) usage "halp! what this do?";;
     -y|--yaml) USE_THIS_YAML="$2";;
-    -d|--deplyment-unit) DU_NAME="$2";;
+    -d|--deplyment-unit) [[ "$2" =~ health-apis-.*-deployment ]] && DU_NAME="$2" || DU_NAME="health-apis-$2-deployment";;
     --dq) DU_NAME=health-apis-data-query-deployment;;
     --bulk) DU_NAME=health-apis-bulk-fhir-deployment;;
     --) shift;break;;
@@ -76,7 +76,7 @@ done
 copyConfFromDeployment() {
   [ -z "$DU_NAME" ] && usage "Deployment unit not specified"
   DU_DEPLOYMENT=$(find .. -name $DU_NAME -type d | head -1)
-  [ -z "$DU_DEPLOYMENT" ] && echo "Cannot find $DU_NAME in $(readlink -f ..)" && exit 1
+  [ ! -d $DU_DEPLOYMENT ] && echo "Cannot find $DU_NAME in $(readlink -f ..)" && exit 1
 
   SOURCE_CONF=$DU_DEPLOYMENT/s3/kong/kong.yml
   [ ! -f $SOURCE_CONF ] && echo "Cannot find $DU_DEPLOYMENT/s3/kong/kong.yml" && exit 1
