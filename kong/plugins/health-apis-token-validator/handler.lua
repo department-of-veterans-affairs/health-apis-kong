@@ -103,9 +103,10 @@ function HealthApisTokenValidator:check_token()
   kong.log.info("Verification response is " .. verification_res.status)
   kong.log.info(verification_res_body)
 
-  -- If unauthorized, we block the user
+  -- If unauthorized, we block the user and advise them to re-authenticate
   if (verification_res_status == 401) then
-    return self:send_response(401, INVALID_TOKEN)
+     kong.response.set_header("WWW-Authenticate","Bearer")
+     return self:send_response(401, INVALID_TOKEN)
   end
 
   -- If authorization service is too busy, we need to tell the user to slow down
