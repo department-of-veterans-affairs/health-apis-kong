@@ -105,18 +105,13 @@ function HealthApisPatientRegistration:access(conf)
   local token_res_body = token_res.body
 
   kong.log.info("Authorization status " .. token_res_status)
-  -- If unauthorized, we block the user
-  if (token_res_status == 401) then
-    return self:send_fhir_response(401, BAD_AUTHORIZE_RESPONSE)
-  end
 
-  -- An unexpected condition
-  if (token_res_status < 200 or token_res_status > 299) then
-    return self:send_fhir_response(500, BAD_AUTHORIZE_RESPONSE)
+  if (token_res_status == 200) then
+    local token_res_json = cjson.decode(token_res_body)
+    self:register_patient(token_res_json.patient)
+  else
+    if (token_res_body ~= nil) then kong.log.info("Authorization response " .. token_res_body) end
   end
-
-  local token_res_json = cjson.decode(token_res_body)
-  self:register_patient(token_res_json.patient)
 
   return self:send_response(token_res_status, token_res_body)
 end
