@@ -38,12 +38,25 @@ Build and run Kong locally.
 - Run the `local` Kong container using the generated kong configuration
 
 Options:
- --bulk                        Alias: -d health-apis-bulk-fhir-deployment
+ --bulk                        Alias: -d health-apis-bulk-fhir-deployment -m ...
  --debug                       Enable debugging output
- --dq                          Alias: -d health-apis-data-query-deployment
+ --dq                          Alias: -d health-apis-data-query-deployment -m ...
+ --fr                          Alias: -d health-apis-fall-risk-deployment -m ...
  -d, --deployment-unit <name>  Specify the deployment unit name
  -h, --help                    Display this help and exit
+ -m, --map-server <spec>       Map a service to the local host
  -y, --yaml <file>             Use this Kong configuration file
+
+Server Mapping
+The --map-server option allows you to map a hostname and port to a port on your local host.
+The specification is 'host:port:localPort'. The "localhost" is OS aware and will adapt to
+Docker for Mac or Linux.
+
+Example
+
+$0 -d health-apis-fall-risk-deployment -m fall-risk:80:8070
+
+
 $1
 EOF
   exit 1
@@ -52,10 +65,12 @@ EOF
 
 USE_THIS_YAML=
 DU_NAME=
+SERVER_MAPPINGS=
+
 
 ARGS=$(getopt -n $(basename ${0}) \
-    -l "debug,help,deplyment-unit:,dq,bulk,yaml:" \
-    -o "hd:y:" -- "$@")
+    -l "debug,help,deplyment-unit:,dq,bulk,fr,yaml:,map-server:" \
+    -o "hd:y:m:" -- "$@")
 [ $? != 0 ] && usage
 eval set -- "$ARGS"
 while true
@@ -65,8 +80,10 @@ do
     -h|--help) usage "halp! what this do?";;
     -y|--yaml) USE_THIS_YAML="$2";;
     -d|--deplyment-unit) [[ "$2" =~ health-apis-.*-deployment ]] && DU_NAME="$2" || DU_NAME="health-apis-$2-deployment";;
-    --dq) DU_NAME=health-apis-data-query-deployment;;
-    --bulk) DU_NAME=health-apis-bulk-fhir-deployment;;
+    --dq) DU_NAME=health-apis-data-query-deployment; SERVER_MAPPINGS="data-query:80:8090 ids:8082:8089";;
+    --bulk) DU_NAME=health-apis-bulk-fhir-deployment; SERVER_MAPPINGS="incredible-bulk:80:8091";;
+    --fr) DU_NAME=health-apis-fall-risk-deployment; SERVER_MAPPINGS="fall-risk:80:8070";;
+    -m|--map-server) SERVER_MAPPINGS+="$2 ";;
     --) shift;break;;
   esac
   shift;
@@ -101,14 +118,13 @@ copyConfFromDeployment() {
     echo "Writing $DEV_CONF"
     cat $SOURCE_CONF | envsubst > $DEV_CONF
   )
-  #
-  # I wish this didn't know about server/port mappings...
-  #
-  sed -i \
-      -e "s/ids:8082/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8089/" \
-      -e "s/data-query:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8090/" \
-      -e "s/incredible-bulk:80/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:8091/" \
-      $DEV_CONF
+
+  for mapping in $SERVER_MAPPINGS
+  do
+    local from=${mapping%:*}
+    local toPort=${mapping##*:}
+    sed -i "s/$from/$HOST_ACCESSIBLE_FROM_WITHIN_DOCKER:$toPort/" $DEV_CONF
+  done
 }
 
 
