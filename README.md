@@ -1,5 +1,7 @@
 # health-apis-kong
 
+DO NOT MERGE THIS
+
 This project provides a customized Kong image that adds custom plugins as well
 as an `on-start.sh` script from AWS S3.
 
