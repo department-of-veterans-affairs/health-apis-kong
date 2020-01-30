@@ -1,4 +1,4 @@
-FROM centos:7
+FROM vasdvp/health-apis-centos:7
 
 RUN yum install -y -q https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm  \
     && yum install -y -q https://rhel7.iuscommunity.org/ius-release.rpm
