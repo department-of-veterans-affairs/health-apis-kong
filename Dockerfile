@@ -1,5 +1,16 @@
 FROM kong:1.1.2
 
+
+#
+# Install VA certs
+#
+RUN wget -P /tmp/ http://aia.pki.va.gov/PKI/AIA/VA/VA-Internal-S2-RCA1-v1.cer \
+  && openssl x509 -inform der \
+     -in /tmp/VA-Internal-S2-RCA1-v1.cer \
+     -out /usr/local/share/ca-certificates/VA-Internal-S2-RCA1-v1.pem \
+  && /usr/sbin/update-ca-certificates
+
+
 # https://github.com/department-of-veterans-affairs/health-apis-devops/blob/master/operations/application-base/Dockerfile
 # necessary tools to run application
 RUN apk update && apk add bash && apk add curl && apk add --update py-pip
