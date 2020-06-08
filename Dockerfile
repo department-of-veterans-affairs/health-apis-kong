@@ -53,7 +53,8 @@ RUN curl -so /tmp/awscli-bundle.zip https://s3.amazonaws.com/aws-cli/awscli-bund
 COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod 777 /docker-entrypoint.sh
+
+RUN chmod 777 /docker-entrypoint.sh && chmod 777 /opt/
 
 USER kong
 
