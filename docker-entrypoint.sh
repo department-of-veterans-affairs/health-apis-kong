@@ -7,6 +7,8 @@ set -e
 if [ "$AWS_CONFIG_FOLDER" == unused ]
 then
   echo "Skipping AWS based configuration"
+  mkdir -p /opt/va && touch /opt/va/test.tmp
+  touch /etc/kong/test.tmp
 else
   echo "Loading AWS based configuration"
   [ -z "$AWS_CONFIG_FOLDER" ] && AWS_CONFIG_FOLDER=$AWS_APP_NAME

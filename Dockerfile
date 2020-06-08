@@ -54,7 +54,7 @@ COPY kong/plugins/ /usr/local/share/lua/5.1/kong/plugins/
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 
-RUN chmod 777 /docker-entrypoint.sh && chmod 777 /opt/
+RUN chmod 777 /docker-entrypoint.sh && chmod 777 /opt/ && chmod 777 /etc/kong/
 
 USER kong
 
