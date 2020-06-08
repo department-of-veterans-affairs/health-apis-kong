@@ -181,7 +181,7 @@ end
 
 function HealthApisTokenValidator:get_token_from_auth_string(authString)
 
-  i, j = find(authString, "Bearer ")
+  local i, j = find(authString, "Bearer ")
   if (i ~= nil) then
     return string.sub(authString, j+1)
   else
@@ -216,7 +216,7 @@ end
 
 function HealthApisTokenValidator:get_read_icn()
 
-  i, j = find(ngx.var.uri, "/Patient/")
+  local i, j = find(ngx.var.uri, "/Patient/")
   if (i ~= nil) then
     local pathIcn = string.sub(ngx.var.uri, j+1)
     return pathIcn

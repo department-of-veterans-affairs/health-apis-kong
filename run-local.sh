@@ -69,7 +69,7 @@ SERVER_MAPPINGS=
 
 
 ARGS=$(getopt -n $(basename ${0}) \
-    -l "debug,help,deplyment-unit:,dq,bulk,fr,yaml:,map-server:" \
+    -l "debug,help,deplyment-unit:,dq,bulk,fr,facilities,yaml:,map-server:" \
     -o "hd:y:m:" -- "$@")
 [ $? != 0 ] && usage
 eval set -- "$ARGS"
@@ -83,6 +83,7 @@ do
     --dq) DU_NAME=health-apis-data-query-deployment; SERVER_MAPPINGS="data-query:80:8090 ids:8082:8089";;
     --bulk) DU_NAME=health-apis-bulk-fhir-deployment; SERVER_MAPPINGS="incredible-bulk:80:8091";;
     --fr) DU_NAME=health-apis-fall-risk-deployment; SERVER_MAPPINGS="fall-risk:80:8070";;
+    --facilities) DU_NAME=lighthouse-facilities-deployment; SERVER_MAPPINGS="facilities:8082:8085 facilities-collector:8082:8080";;
     -m|--map-server) SERVER_MAPPINGS+="$2 ";;
     --) shift;break;;
   esac
@@ -145,7 +146,9 @@ fi
 [ -z "$DEV_CONF" ] && usage "You must specify --yaml or --deployment-unit"
 
 IMAGE_NAME=health-api-kong:local
-docker build -t $IMAGE_NAME .
+docker build --no-cache -t $IMAGE_NAME .
+
+[ "$?" != 0 ] && exit 1
 
 PLUGIN_ARRAY=('request-termination' 'response-transformer' \
   'health-apis-token-validator' 'health-apis-static-token-handler' \
