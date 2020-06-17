@@ -154,7 +154,7 @@ PLUGIN_ARRAY=('request-termination' 'response-transformer' \
   'health-apis-token-validator' 'health-apis-static-token-handler' \
   'health-apis-patient-registration' 'health-apis-doppelganger' \
   'health-apis-token-protected-operation' 'health-apis-patient-matching' \
-  'request-transformer')
+  'request-transformer' 'lighthouse-fhir-post-based-searching')
 
 docker run \
   --rm \

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+[ -z "$LIGHTHOUSE_TOKEN" ] && echo "LIGHTHOUSE_TOKEN must be set" && exit 1
+
+cat <<EOF
+
+SET UP
+
+- Start Data Query connected to Synthetic Database
+- Start Kong using Data Query configuration
+(NOTE: make sure lighthouse-fhir-post-based-searching is being used by the DU's kong.yml)
+
+EOF
+
+read -p "PRESS ENTER TO START"
+
+request() {
+  local expected="${1:-}"
+  local method="${2:-GET}"
+  local pathAndQuery="${3:-}"
+  local extraArgs="${4:-}"
+
+  local curlStatus=$(curl -sk -o /dev/null -w '%{http_code}' \
+    -X $method \
+    -H "Authorization: Bearer $LIGHTHOUSE_TOKEN" \
+    https://localhost:8443/$pathAndQuery \
+    $extraArgs)
+  if [ "$curlStatus" != "$expected" ]; then
+    echo "✖︎ $curlStatus $method $pathAndQuery $extraArgs (Expected: $expected)"
+  else
+    echo "✓ $curlStatus $method $pathAndQuery $extraArgs"
+  fi
+}
+
+request 200 GET "dstu2/AllergyIntolerance?patient=1011537977V693883" # Plain old dstu2 request
+request 200 GET "r4/AllergyIntolerance?patient=1011537977V693883" # Plain old r4 request
+request 500 PUT "r4/AllergyIntolerance/_search?patient=1011537977V693883" # PUT is unsupported 500 is returned from dq
+request 500 POST "r4/AllergyIntolerance/_search?patient=1011537977V693883" "-HContent-Type:application/json" # invalid content-type
+request 500 POST "r4/AllergyIntolerance?patient=1011537977V693883" # POST without _search wont reconfigure request and application doesnt support POST
+request 500 POST "r4/AllergyIntolerance/search?patient=1011537977V693883" # Invalid search path
+request 200 POST "r4/AllergyIntolerance/_search?patient=1011537977V693883" "-HContent-Type:application/x-www-form-urlencoded" # POST with query, no body
+request 200 POST "r4/Immunization/_search" "-d patient=1011537977V693883" # POST with body, no query
+request 200 POST "r4/Observation/_search?patient=1011537977V693883" "-d _count=1" # POST with body and query
+request 200 POST "r4/Condition/_search?category=encounter-diagnosis" "-d patient=1011537977V693883&_count=1&page=3" # Ampersands just to check
+request 200 POST "r4/AllergyIntolerance/_search?patient=1011537977%56693883" "-d _count=1" # URL sensitive character
+request 200 POST "r4/AllergyIntolerance/_search" "-d patient=1011537977%56693883" # URL sensitive character

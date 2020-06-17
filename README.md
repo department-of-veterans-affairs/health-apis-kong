@@ -185,7 +185,27 @@ allow_empty_header - Boolean that if set to true, will allow requests
   with out it. (Defaults to false)
 ```
 
+## Plugin: lighthouse-fhir-post-based-searching
+
+This plugin allows for POST based searching available in the FHIR R4 spec by
+validating the request and transforming it. The resulting GET request is reformatted
+in a way that data-query can understand and perform searches with. The plugin allows
+parameters to exist both as query parameters and in the body of the POST request.
+
+An example request could look like:
+```
+$ curl -s -X POST \
+  -H 'Authorization: Bearer $TOKEN' \
+  https://sandbox-api.va.gov/services/fhir/v0/r4/Condition/_search \
+  -d 'patient=1010101010V666666&category=encounter-diagnosis&_count=10&page=1'
+```
+
+#### Configuration
+No added configurations are necessary. The plugin is self sufficient in determining which requests to transform and which to
+let through to the application.
+
 ---
+
 ### Example
 
 ```

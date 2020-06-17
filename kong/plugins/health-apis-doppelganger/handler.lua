@@ -35,9 +35,10 @@ end
 --
 function Doppelganger:access(conf)
    Doppelganger.super.access(self)
+   local requestPath = ngx.var.upstream_uri
    local me = kong.request.get_header("X-VA-ICN")
    if (me == nil) then return end
-   local mapping = self:findMappingForPath(conf,kong.request.get_path())
+   local mapping = self:findMappingForPath(conf, requestPath)
    if (mapping == nil) then return end
    local targetIcn = self:findTargetIcnForDoppelganger(mapping,me)
    if (targetIcn == nil) then return end
@@ -49,9 +50,9 @@ function Doppelganger:access(conf)
    -- the new payload can pass verification in health-apis-patient-matching.
    kong.service.request.set_header("X-VA-ICN", targetIcn)
    kong.log.info("Doppelganger " .. ngx.ctx.doppelganger .. " for " .. targetIcn .. " on path " .. mapping.path)
-   local newPath = string.gsub(kong.request.get_path(),ngx.ctx.doppelganger,targetIcn)
-   local newQuery = string.gsub(kong.request.get_raw_query(),ngx.ctx.doppelganger,targetIcn)
-   kong.log.info("Changing " .. kong.request.get_path() .. "?" .. kong.request.get_raw_query()
+   local newPath = string.gsub(requestPath, ngx.ctx.doppelganger, targetIcn)
+   local newQuery = string.gsub(kong.request.get_raw_query(), ngx.ctx.doppelganger, targetIcn)
+   kong.log.info("Changing " .. requestPath .. "?" .. kong.request.get_raw_query()
                     .. " to " .. newPath .. "?" .. newQuery)
    kong.service.request.set_path(newPath)
    kong.service.request.set_raw_query(newQuery)
