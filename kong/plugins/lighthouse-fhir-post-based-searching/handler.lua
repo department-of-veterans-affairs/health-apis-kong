@@ -63,7 +63,7 @@ function PostBasedSearching:isFhirPostSearch(requestPath, requestMethod, content
   -- method is POST
   return requestMethod == "POST"
     -- content-type is application/x-www-form-urlencoded
-    and contentType == "application/x-www-form-urlencoded"
+    and string.gsub(contentType, " *;.*", "") == "application/x-www-form-urlencoded"
     -- Path is correct for fhir POST searching
     and string.find(requestPath, "[A-Za-z]+/_search") ~= nil
 end -- PostBasedSearching:isFhirPostSearch
