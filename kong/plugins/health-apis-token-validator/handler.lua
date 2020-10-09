@@ -60,7 +60,7 @@ function HealthApisTokenValidator:access(conf)
     local responseJson = self:check_token()
 
     tokenIcn = responseJson.data.attributes["va_identifiers"].icn
-    responseScopes = responseJson.data.attributes.scp
+    local responseScopes = responseJson.data.attributes.scp
     self:check_scope(responseScopes)
 
   end
@@ -71,22 +71,40 @@ function HealthApisTokenValidator:access(conf)
   kong.log.info("Token validated and ICN header added to request")
 end
 
-function HealthApisTokenValidator:check_token()
 
+function HealthApisTokenValidator:request_verification()
   local client = http.new()
   client:set_timeout(self.conf.verification_timeout)
-
   kong.log.info("Checking token with " .. self.conf.verification_url);
-
-  local verification_res, err = client:request_uri(self.conf.verification_url, {
-    method = "GET",
+  local headers = {
+    Authorization = ngx.req.get_headers()["Authorization"],
+    Host = self.conf.verification_host,
+    apiKey = self.conf.api_key,
+  }
+  -- Backwards compatibility to use GET request when `aud` cannot be
+  -- specified (used with v0 flavor validation endpoints)
+  if self.conf.audience == nil or self.conf.audience == "" then
+    return client:request_uri(self.conf.verification_url, {
+      method = "GET",
+      ssl_verify = false,
+      headers = headers
+    })
+  end
+  local body = {
+     aud = self.conf.audience
+  }
+  return client:request_uri(self.conf.verification_url, {
+    method = "POST",
     ssl_verify = false,
-    headers = {
-      Authorization = ngx.req.get_headers()["Authorization"],
-      Host = self.conf.verification_host,
-      apiKey = self.conf.api_key,
-    },
+    headers = headers,
+    body = ngx.encode_args(body)
   })
+end
+
+function HealthApisTokenValidator:check_token()
+
+
+  local verification_res, err = self:request_verification()
 
   if not verification_res then
     kong.log.err("Missing verification response" .. err)
@@ -180,7 +198,6 @@ function HealthApisTokenValidator:check_for_array_entry(array, entry)
 end
 
 function HealthApisTokenValidator:get_token_from_auth_string(authString)
-
   local i, j = find(authString, "Bearer ")
   if (i ~= nil) then
     return string.sub(authString, j+1)
@@ -247,7 +264,7 @@ function HealthApisTokenValidator:get_requested_resource_type()
 
   if (self:is_request_read()) then
     local requestedResourceRead = string.match(ngx.var.uri, "/%a*/[%w%-]+$")
-    i, j = find(requestedResourceRead, "/%a*/")
+    local i, j = find(requestedResourceRead, "/%a*/")
     if (i ~= nil) then
       requestedResource = string.sub(requestedResourceRead, i+1, j-1)
     end

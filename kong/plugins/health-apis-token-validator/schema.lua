@@ -8,6 +8,7 @@ return {
     static_icn = {type = "string", default = ""},
     custom_scope_validation_enabled = {type = "boolean", default = false},
     custom_scope = {type = "string", default = ""},
-    api_key = {type = "string"}
+    api_key = {type = "string"},
+    audience = { type = "string", default = ""}
   }
 }

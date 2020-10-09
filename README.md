@@ -25,7 +25,16 @@ verification_host - The value of the Host header to send while verifying token
 static_token - The value of the static test token
 static_icn - The ICN that is associated with the test patient
 api_key - OAuth API key
+audience - Optional OAuth `aud` value, see below.
 ```
+
+If `audience` is configured, then the plugin will make an HTTP `POST` request
+to the validation server with a URL encoded payload of `aud=${audience}`.
+
+If `audience` is not configured, then the plugin will make an HTTP `GET` request
+to the validation server.
+
+
 
 Advanced test usage
 ```

@@ -46,6 +46,7 @@ Options:
  -h, --help                    Display this help and exit
  -m, --map-server <spec>       Map a service to the local host
  -y, --yaml <file>             Use this Kong configuration file
+ --yolo                        Build faster with more risk using a cache
 
 Server Mapping
 The --map-server option allows you to map a hostname and port to a port on your local host.
@@ -66,10 +67,10 @@ EOF
 USE_THIS_YAML=
 DU_NAME=
 SERVER_MAPPINGS=
-
+CACHE_OPT="--no-cache"
 
 ARGS=$(getopt -n $(basename ${0}) \
-    -l "debug,help,deplyment-unit:,dq,bulk,fr,facilities,yaml:,map-server:" \
+    -l "debug,help,deplyment-unit:,dq,bulk,fr,facilities,yaml:,map-server:,yolo" \
     -o "hd:y:m:" -- "$@")
 [ $? != 0 ] && usage
 eval set -- "$ARGS"
@@ -79,6 +80,7 @@ do
     --debug) set -x;;
     -h|--help) usage "halp! what this do?";;
     -y|--yaml) USE_THIS_YAML="$2";;
+    --yolo) CACHE_OPT="";;
     -d|--deplyment-unit) [[ "$2" =~ health-apis-.*-deployment ]] && DU_NAME="$2" || DU_NAME="health-apis-$2-deployment";;
     --dq) DU_NAME=health-apis-data-query-deployment; SERVER_MAPPINGS="data-query:80:8090 ids:8082:8089";;
     --bulk) DU_NAME=health-apis-bulk-fhir-deployment; SERVER_MAPPINGS="incredible-bulk:80:8091";;
@@ -146,7 +148,7 @@ fi
 [ -z "$DEV_CONF" ] && usage "You must specify --yaml or --deployment-unit"
 
 IMAGE_NAME=health-api-kong:local
-docker build --no-cache -t $IMAGE_NAME .
+docker build $CACHE_OPT -t $IMAGE_NAME .
 
 [ "$?" != 0 ] && exit 1
 
