@@ -93,6 +93,7 @@ function HealthApisTokenValidator:request_verification()
   local body = {
      aud = self.conf.audience
   }
+  headers["Content-Type"]="application/x-www-form-urlencoded"
   return client:request_uri(self.conf.verification_url, {
     method = "POST",
     ssl_verify = false,
