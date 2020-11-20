@@ -35,6 +35,16 @@ function HealthApisPatientMatching:header_filter()
     return
   end
 
+
+  --
+  -- If we a system or user scope was detected by token validation, we will not
+  -- enforce patient matching.
+  --
+  if (ngx.ctx.clinicalScopeType == "system" or ngx.ctx.clinicalScopeType == "user") then
+    kong.log.info("ClinicalScopeType is: " .. ngx.ctx.clinicalScopeType .. ". Skipping patient-matching.")
+    return
+  end
+
   --
   -- If we are missing the INCLUDES-ICN header, fail with 403 Forbidden.
   --

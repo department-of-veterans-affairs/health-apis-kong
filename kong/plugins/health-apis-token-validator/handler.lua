@@ -56,19 +56,22 @@ function HealthApisTokenValidator:access(conf)
   if (token == self.conf.static_token) then
     kong.log.info("Static token")
     tokenIcn = self.conf.static_icn
+    self:check_icn(tokenIcn)
   else
     local responseJson = self:check_token()
-
-    tokenIcn = responseJson.data.attributes["va_identifiers"].icn
     local responseScopes = responseJson.data.attributes.scp
     self:check_scope(responseScopes)
 
+    if (ngx.ctx.clinicalScopeType ~= "system" and ngx.ctx.clinicalScopeType ~= "user") then
+      tokenIcn = responseJson.data.attributes["va_identifiers"].icn
+      self:check_icn(tokenIcn)
+    end
   end
 
-  self:check_icn(tokenIcn)
-
-  kong.service.request.set_header("X-VA-ICN", tokenIcn)
-  kong.log.info("Token validated and ICN header added to request")
+  if (ngx.ctx.clinicalScopeType ~= "system" and ngx.ctx.clinicalScopeType ~= "user") then
+    kong.service.request.set_header("X-VA-ICN", tokenIcn)
+    kong.log.info("Token validated and ICN header added to request")
+  end
 end
 
 
@@ -175,13 +178,19 @@ function HealthApisTokenValidator:check_scope(tokenScope)
     requestedResource = self:get_requested_resource_type()
   end
 
-  local requestScope = "patient/" .. requestedResource .. ".read"
+  local systemScope = "system/" .. requestedResource .. ".read"
+  if (self:check_for_array_entry(tokenScope, systemScope) == true) then
+    ngx.log(ngx.INFO, "Found a System Read scope. Proceeding.")
+    ngx.ctx.clinicalScopeType = "system"
+    return
+  end
 
+  local requestScope = "patient/" .. requestedResource .. ".read"
   if (self:check_for_array_entry(tokenScope, requestScope) ~= true) then
     ngx.log(ngx.INFO, "Requested resource scope not granted to token")
     return self:send_response(403, SCOPE_MISMATCH)
   end
-
+  ngx.ctx.clinicalScopeType = "patient"
 end
 
 function HealthApisTokenValidator:check_for_array_entry(array, entry)
